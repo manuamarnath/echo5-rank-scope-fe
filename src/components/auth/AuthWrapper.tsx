@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import LoginForm from './LoginForm';
-import RegisterForm from './RegisterForm';
+import SignIn from './SignIn';
+import SignUp from './SignUp';
 
 export default function AuthWrapper() {
   const [isLogin, setIsLogin] = useState(true);
@@ -10,9 +10,9 @@ export default function AuthWrapper() {
   return (
     <>
       {isLogin ? (
-        <LoginForm onToggleMode={toggleMode} />
+        <SignIn onToggleMode={toggleMode} />
       ) : (
-        <RegisterForm onToggleMode={toggleMode} />
+        <SignUp onToggleMode={toggleMode} />
       )}
     </>
   );
