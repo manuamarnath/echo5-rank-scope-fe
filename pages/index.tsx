@@ -1,16 +1,72 @@
-import React from 'react';
-import Link from 'next/link';
+import { useAuth } from '../src/components/auth/AuthContext';
+import AuthWrapper from '../src/components/auth/AuthWrapper';
+import MainLayout from '../src/components/layout/MainLayout';
 
 export default function Home() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>;
+  }
+
+  if (!user) {
+    return <AuthWrapper />;
+  }
+
   return (
-    <main className="max-w-2xl mx-auto p-8 text-center">
-      <h1 className="text-4xl font-bold mb-4">Welcome to RankScope</h1>
-      <p className="mb-6 text-lg">SEO SaaS for automated keyword allocation, content briefs, and reporting.</p>
-      <div className="flex flex-col gap-4 items-center">
-        <Link href="/dashboard" className="btn">Go to Dashboard</Link>
-        <Link href="/pages" className="btn">View Pages</Link>
-        <Link href="/tasks" className="btn">View Tasks</Link>
+    <MainLayout>
+      <div style={{ padding: '2rem' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+          Welcome to RankScope
+        </h1>
+        <p style={{ marginBottom: '1rem' }}>
+          Hello {user.email}! You are logged in as a {user.role}.
+        </p>
+        <div style={{ display: 'grid', gap: '1rem', maxWidth: '400px' }}>
+          <a 
+            href="/dashboard" 
+            style={{ 
+              padding: '0.75rem 1.5rem', 
+              backgroundColor: '#4f46e5', 
+              color: 'white', 
+              textDecoration: 'none', 
+              borderRadius: '0.375rem',
+              textAlign: 'center',
+              fontWeight: '500'
+            }}
+          >
+            Go to Dashboard
+          </a>
+          <a 
+            href="/clients" 
+            style={{ 
+              padding: '0.75rem 1.5rem', 
+              backgroundColor: '#10b981', 
+              color: 'white', 
+              textDecoration: 'none', 
+              borderRadius: '0.375rem',
+              textAlign: 'center',
+              fontWeight: '500'
+            }}
+          >
+            Manage Clients
+          </a>
+          <a 
+            href="/pages" 
+            style={{ 
+              padding: '0.75rem 1.5rem', 
+              backgroundColor: '#f59e0b', 
+              color: 'white', 
+              textDecoration: 'none', 
+              borderRadius: '0.375rem',
+              textAlign: 'center',
+              fontWeight: '500'
+            }}
+          >
+            Pages Management
+          </a>
+        </div>
       </div>
-    </main>
+    </MainLayout>
   );
 }
