@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@tanstack/react-query": "^5.89.0",
+    "axios": "^1.12.2",
+    "react-hook-form": "^7.62.0",
+    "recharts": "^3.2.1",
+    "shadcn-ui": "^0.9.5",
+    "tailwindcss": "^4.1.13"
+  }
+}
