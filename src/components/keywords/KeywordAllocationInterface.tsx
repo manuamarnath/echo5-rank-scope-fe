@@ -20,7 +20,7 @@ interface TeamMember {
 }
 
 interface KeywordAllocationProps {
-  onClose: () => void;
+  onClose?: () => void;
   clientId?: string;
 }
 
@@ -398,19 +398,21 @@ how to improve SEO, informational, 890, 32"
           <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
             Keyword Allocation System
           </h2>
-          <button
-            onClick={onClose}
-            style={{ 
-              padding: '0.5rem', 
-              backgroundColor: '#f3f4f6', 
-              color: '#374151', 
-              border: 'none', 
-              borderRadius: '0.25rem',
-              cursor: 'pointer'
-            }}
-          >
-            ✕ Close
-          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{ 
+                padding: '0.5rem', 
+                backgroundColor: '#f3f4f6', 
+                color: '#374151', 
+                border: 'none', 
+                borderRadius: '0.25rem',
+                cursor: 'pointer'
+              }}
+            >
+              ✕ Close
+            </button>
+          )}
         </div>
 
         {view === 'upload' && renderUploadView()}
