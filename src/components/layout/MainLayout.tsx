@@ -109,10 +109,17 @@ export default function MainLayout({ children }: LayoutProps) {
                 sx={{
                   borderRadius: 2,
                   '&.Mui-selected': {
-                    backgroundColor: theme.palette.primary.light,
-                    color: theme.palette.primary.main,
+                    backgroundColor: theme.palette.primary.main,
+                    color: 'white',
                     '&:hover': {
-                      backgroundColor: theme.palette.primary.light,
+                      backgroundColor: theme.palette.primary.dark,
+                    },
+                    '& .MuiListItemText-primary': {
+                      color: 'white',
+                      fontWeight: 600,
+                    },
+                    '& .MuiListItemIcon-root': {
+                      color: 'white',
                     },
                   },
                   '&:hover': {
@@ -122,7 +129,7 @@ export default function MainLayout({ children }: LayoutProps) {
               >
                 <ListItemIcon sx={{ 
                   minWidth: 40,
-                  color: isActive ? theme.palette.primary.main : 'inherit'
+                  color: isActive ? 'white' : 'inherit'
                 }}>
                   <IconComponent />
                 </ListItemIcon>
@@ -130,6 +137,7 @@ export default function MainLayout({ children }: LayoutProps) {
                   primary={item.label} 
                   primaryTypographyProps={{
                     fontWeight: isActive ? 600 : 400,
+                    color: isActive ? 'white' : 'inherit',
                   }}
                 />
               </ListItemButton>
