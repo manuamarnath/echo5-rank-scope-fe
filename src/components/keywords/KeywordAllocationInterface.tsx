@@ -369,25 +369,29 @@ how to improve SEO, informational, 890, 32"
 
   return (
     <div style={{ 
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
+      backgroundColor: '#F9FAFB',
+      minHeight: '100vh',
+      padding: onClose ? '0' : '24px' // Only add padding if not used as modal
     }}>
       <div style={{ 
         backgroundColor: 'white',
-        borderRadius: '0.5rem',
+        borderRadius: onClose ? '0.5rem' : '12px',
         padding: '2rem',
-        maxWidth: '60rem',
-        width: '90%',
-        maxHeight: '80vh',
-        overflowY: 'auto'
+        maxWidth: onClose ? '60rem' : '1200px',
+        width: onClose ? '90%' : '100%',
+        margin: onClose ? '0' : '0 auto',
+        maxHeight: onClose ? '80vh' : 'none',
+        overflowY: onClose ? 'auto' : 'visible',
+        ...(onClose ? {
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 1000,
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+        } : {
+          border: '1px solid #E5E7EB'
+        })
       }}>
         <div style={{ 
           display: 'flex', 
@@ -418,6 +422,19 @@ how to improve SEO, informational, 890, 32"
         {view === 'upload' && renderUploadView()}
         {view === 'allocate' && renderAllocationView()}
       </div>
+      
+      {/* Modal backdrop only when used as modal */}
+      {onClose && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 999
+        }} onClick={onClose} />
+      )}
     </div>
   );
 }
