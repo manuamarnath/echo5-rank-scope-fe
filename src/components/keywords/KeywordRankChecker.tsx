@@ -93,13 +93,41 @@ export default function KeywordRankChecker() {
 
   const fetchClients = async () => {
     try {
-      const response = await fetch('/api/clients');
+      console.log('Attempting to fetch clients...');
+      
+      // Try the proxy endpoint first
+      let response = await fetch('/api/clients/demo');
+      
+      // If proxy fails, try direct backend connection
+      if (!response.ok) {
+        console.log('Proxy failed, trying direct backend connection...');
+        response = await fetch('http://localhost:5000/clients/demo');
+      }
+      
       if (response.ok) {
         const data = await response.json();
         setClients(data);
+        console.log('Fetched clients successfully:', data);
+      } else {
+        console.error('Failed to fetch clients:', response.status, response.statusText);
+        // Set an error state or show message to user
+        setClients([]);
       }
     } catch (error) {
       console.error('Error fetching clients:', error);
+      // Try direct backend as fallback
+      try {
+        console.log('Trying direct backend connection as fallback...');
+        const response = await fetch('http://localhost:5000/clients/demo');
+        if (response.ok) {
+          const data = await response.json();
+          setClients(data);
+          console.log('Fetched clients via direct connection:', data);
+        }
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+        setClients([]);
+      }
     }
   };
 
@@ -226,13 +254,28 @@ export default function KeywordRankChecker() {
                 fontSize: '0.875rem'
               }}
             >
-              <option value="">Select a client</option>
+              <option value="">
+                {clients.length === 0 ? 'No clients found - create clients first' : 'Select a client'}
+              </option>
               {clients.map(client => (
                 <option key={client._id} value={client._id}>
                   {client.name} ({client.industry})
                 </option>
               ))}
             </select>
+            {clients.length === 0 && (
+              <div style={{ 
+                marginTop: '0.5rem', 
+                padding: '0.5rem', 
+                backgroundColor: '#fef3c7', 
+                border: '1px solid #f59e0b',
+                borderRadius: '0.375rem',
+                fontSize: '0.75rem',
+                color: '#92400e'
+              }}>
+                ⚠️ No clients available. Please go to the <a href="/clients" style={{ color: '#92400e', textDecoration: 'underline' }}>Clients page</a> to create a client first.
+              </div>
+            )}
           </div>
 
           <div>
