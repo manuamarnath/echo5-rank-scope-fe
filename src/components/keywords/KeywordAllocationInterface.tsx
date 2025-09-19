@@ -1,15 +1,33 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface Keyword {
-  id: string;
+  id?: string;
+  _id?: string;
   text: string;
-  intent: 'informational' | 'navigational' | 'commercial' | 'transactional';
+  intent?: string;
   searchVolume?: number;
   difficulty?: number;
   geo?: string;
   allocatedTo?: string;
   role?: 'owner' | 'employee' | 'client';
-  status: 'pending' | 'allocated' | 'in-progress' | 'completed';
+  status?: 'pending' | 'allocated' | 'in-progress' | 'completed';
+  isPrimary?: boolean;
+}
+
+interface Client {
+  _id: string;
+  name: string;
+  industry: string;
+  website?: string;
+  locations?: Array<{
+    city: string;
+    state: string;
+    country: string;
+    radius?: number;
+    radiusUnit?: string;
+  }>;
+  services?: string[];
+  competitors?: string[];
 }
 
 interface TeamMember {
@@ -32,6 +50,9 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
   const [allocationRole, setAllocationRole] = useState<'owner' | 'employee' | 'client'>('employee');
   const [processing, setProcessing] = useState(false);
   const [view, setView] = useState<'upload' | 'allocate' | 'manage'>('upload');
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [clientKeywords, setClientKeywords] = useState<Keyword[]>([]);
 
   // Mock team members - in real app, this would come from API
   const teamMembers: TeamMember[] = [
@@ -39,6 +60,49 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
     { id: '2', name: 'Jane Smith', email: 'jane@example.com', role: 'employee' },
     { id: '3', name: 'Client User', email: 'client@example.com', role: 'client' },
   ];
+
+  useEffect(() => {
+    fetchClients();
+  }, []);
+
+  useEffect(() => {
+    if (selectedClientId) {
+      fetchClientKeywords(selectedClientId);
+    } else {
+      setClientKeywords([]);
+    }
+  }, [selectedClientId]);
+
+  const fetchClients = async () => {
+    try {
+      let response = await fetch('/api/clients/demo');
+      if (!response.ok) {
+        response = await fetch('http://localhost:5000/clients/demo');
+      }
+      if (response.ok) {
+        const data = await response.json();
+        setClients(data);
+      } else {
+        setClients([]);
+      }
+    } catch (error) {
+      setClients([]);
+    }
+  };
+
+  const fetchClientKeywords = async (clientId: string) => {
+    try {
+      const response = await fetch(`/api/keywords?clientId=${clientId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setClientKeywords(data);
+      } else {
+        setClientKeywords([]);
+      }
+    } catch (error) {
+      setClientKeywords([]);
+    }
+  };
 
   const processKeywords = () => {
     if (!bulkText.trim()) return;
@@ -64,64 +128,27 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
     setBulkText('');
   };
 
-  const allocateSelectedKeywords = () => {
-    if (!allocationTarget || selectedKeywords.length === 0) return;
-
-    setProcessing(true);
-
-    // Simulate processing with progress
-    setTimeout(() => {
-      setKeywords(prev => prev.map(kw => 
-        selectedKeywords.includes(kw.id)
-          ? { ...kw, allocatedTo: allocationTarget, role: allocationRole, status: 'allocated' as const }
-          : kw
-      ));
-      
-      setSelectedKeywords([]);
-      setProcessing(false);
-      
-      // TODO: Call backend API to trigger BullMQ worker
-      console.log('Keywords allocated and processing started');
-    }, 2000);
-  };
-
-  const toggleKeywordSelection = (keywordId: string) => {
-    setSelectedKeywords(prev => 
-      prev.includes(keywordId)
-        ? prev.filter(id => id !== keywordId)
-        : [...prev, keywordId]
-    );
-  };
-
-  const getIntentColor = (intent: string) => {
-    switch (intent) {
-      case 'informational': return '#3b82f6';
-      case 'navigational': return '#10b981';
-      case 'commercial': return '#f59e0b';
-      case 'transactional': return '#ef4444';
-      default: return '#6b7280';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return '#6b7280';
-      case 'allocated': return '#3b82f6';
-      case 'in-progress': return '#f59e0b';
-      case 'completed': return '#10b981';
-      default: return '#6b7280';
-    }
-  };
-
   const renderUploadView = () => (
     <div>
       <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
         Upload Keywords
       </h3>
+      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+        Select Client
+      </label>
+      <select
+        value={selectedClientId}
+        onChange={e => setSelectedClientId(e.target.value)}
+        style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', marginBottom: '1rem' }}
+      >
+        <option value="">Select client...</option>
+        {clients.map(client => (
+          <option key={client._id} value={client._id}>{client.name}</option>
+        ))}
+      </select>
       <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
         Add keywords one per line, or use CSV format: keyword, intent, volume, difficulty, geo
       </p>
-      
       <textarea
         value={bulkText}
         onChange={(e) => setBulkText(e.target.value)}
@@ -134,23 +161,19 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
           fontSize: '0.875rem',
           fontFamily: 'monospace'
         }}
-        placeholder="SEO services
-content marketing, commercial, 1200, 45, New York
-digital marketing agency, commercial, 2300, 67, USA
-how to improve SEO, informational, 890, 32"
+        placeholder={"SEO services\ncontent marketing, commercial, 1200, 45, New York\ndigital marketing agency, commercial, 2300, 67, USA\nhow to improve SEO, informational, 890, 32"}
       />
-      
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
         <button
           onClick={processKeywords}
-          disabled={!bulkText.trim()}
+          disabled={!bulkText.trim() || !selectedClientId}
           style={{ 
             padding: '0.5rem 1rem', 
-            backgroundColor: bulkText.trim() ? '#4f46e5' : '#9ca3af', 
+            backgroundColor: bulkText.trim() && selectedClientId ? '#4f46e5' : '#9ca3af', 
             color: 'white', 
             border: 'none', 
             borderRadius: '0.375rem',
-            cursor: bulkText.trim() ? 'pointer' : 'not-allowed'
+            cursor: bulkText.trim() && selectedClientId ? 'pointer' : 'not-allowed'
           }}
         >
           Process Keywords
@@ -175,195 +198,29 @@ how to improve SEO, informational, 890, 32"
 
   const renderAllocationView = () => (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: '600' }}>
-          Allocate Keywords
-        </h3>
-        <button
-          onClick={() => setView('upload')}
-          style={{ 
-            padding: '0.25rem 0.5rem', 
-            backgroundColor: '#f3f4f6', 
-            color: '#374151', 
-            border: 'none', 
-            borderRadius: '0.25rem',
-            cursor: 'pointer',
-            fontSize: '0.875rem'
-          }}
-        >
-          ← Back to Upload
-        </button>
-      </div>
-
-      <div style={{ 
-        display: 'grid', 
-        gap: '1rem', 
-        gridTemplateColumns: '1fr 300px',
-        marginBottom: '1rem'
-      }}>
-        <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
-            Assign to Team Member
-          </label>
-          <select
-            value={allocationTarget}
-            onChange={(e) => setAllocationTarget(e.target.value)}
-            style={{ 
-              width: '100%', 
-              padding: '0.5rem', 
-              border: '1px solid #d1d5db', 
-              borderRadius: '0.375rem' 
-            }}
-          >
-            <option value="">Select team member...</option>
-            {teamMembers.map(member => (
-              <option key={member.id} value={member.id}>
-                {member.name} ({member.role})
-              </option>
+      <div style={{ marginBottom: '1rem' }}>
+        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.5rem' }}>Onboarding Keywords for Selected Client</h4>
+        {clientKeywords.length === 0 ? (
+          <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>No onboarding keywords found for this client.</div>
+        ) : (
+          <div style={{ maxHeight: '120px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '0.375rem', marginBottom: '1rem' }}>
+            {clientKeywords.map((kw) => (
+              <div key={kw.id || kw._id} style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
+                <span style={{ fontWeight: '500' }}>{kw.text}</span>
+                {kw.isPrimary ? (
+                  <span style={{ marginLeft: '0.5rem', color: '#3b82f6', fontSize: '0.75rem' }}>Primary</span>
+                ) : (
+                  <span style={{ marginLeft: '0.5rem', color: '#10b981', fontSize: '0.75rem' }}>Seed</span>
+                )}
+                {kw.intent && (
+                  <span style={{ marginLeft: '0.5rem', color: '#6b7280', fontSize: '0.75rem' }}>{kw.intent}</span>
+                )}
+              </div>
             ))}
-          </select>
-        </div>
-        
-        <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
-            Role
-          </label>
-          <select
-            value={allocationRole}
-            onChange={(e) => setAllocationRole(e.target.value as any)}
-            style={{ 
-              width: '100%', 
-              padding: '0.5rem', 
-              border: '1px solid #d1d5db', 
-              borderRadius: '0.375rem' 
-            }}
-          >
-            <option value="owner">Owner</option>
-            <option value="employee">Employee</option>
-            <option value="client">Client</option>
-          </select>
-        </div>
-      </div>
-
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '1rem'
-      }}>
-        <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-          {selectedKeywords.length} keywords selected
-        </span>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button
-            onClick={() => setSelectedKeywords(keywords.map(kw => kw.id))}
-            style={{ 
-              padding: '0.25rem 0.5rem', 
-              backgroundColor: '#f3f4f6', 
-              color: '#374151', 
-              border: 'none', 
-              borderRadius: '0.25rem',
-              cursor: 'pointer',
-              fontSize: '0.75rem'
-            }}
-          >
-            Select All
-          </button>
-          <button
-            onClick={() => setSelectedKeywords([])}
-            style={{ 
-              padding: '0.25rem 0.5rem', 
-              backgroundColor: '#f3f4f6', 
-              color: '#374151', 
-              border: 'none', 
-              borderRadius: '0.25rem',
-              cursor: 'pointer',
-              fontSize: '0.75rem'
-            }}
-          >
-            Clear
-          </button>
-          <button
-            onClick={allocateSelectedKeywords}
-            disabled={!allocationTarget || selectedKeywords.length === 0 || processing}
-            style={{ 
-              padding: '0.25rem 0.5rem', 
-              backgroundColor: (!allocationTarget || selectedKeywords.length === 0 || processing) ? '#9ca3af' : '#4f46e5', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '0.25rem',
-              cursor: (!allocationTarget || selectedKeywords.length === 0 || processing) ? 'not-allowed' : 'pointer',
-              fontSize: '0.75rem'
-            }}
-          >
-            {processing ? 'Processing...' : 'Allocate'}
-          </button>
-        </div>
-      </div>
-
-      <div style={{ 
-        maxHeight: '400px', 
-        overflowY: 'auto',
-        border: '1px solid #e5e7eb',
-        borderRadius: '0.375rem'
-      }}>
-        {keywords.map((keyword) => (
-          <div
-            key={keyword.id}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              padding: '0.75rem', 
-              borderBottom: '1px solid #f3f4f6',
-              backgroundColor: selectedKeywords.includes(keyword.id) ? '#eff6ff' : 'white',
-              cursor: 'pointer'
-            }}
-            onClick={() => toggleKeywordSelection(keyword.id)}
-          >
-            <input
-              type="checkbox"
-              checked={selectedKeywords.includes(keyword.id)}
-              onChange={() => {}}
-              style={{ marginRight: '0.75rem' }}
-            />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>
-                {keyword.text}
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <span style={{ 
-                  fontSize: '0.75rem', 
-                  padding: '0.125rem 0.375rem', 
-                  backgroundColor: getIntentColor(keyword.intent) + '20',
-                  color: getIntentColor(keyword.intent),
-                  borderRadius: '0.25rem'
-                }}>
-                  {keyword.intent}
-                </span>
-                <span style={{ 
-                  fontSize: '0.75rem', 
-                  padding: '0.125rem 0.375rem', 
-                  backgroundColor: getStatusColor(keyword.status) + '20',
-                  color: getStatusColor(keyword.status),
-                  borderRadius: '0.25rem'
-                }}>
-                  {keyword.status}
-                </span>
-                {keyword.searchVolume && (
-                  <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                    Vol: {keyword.searchVolume.toLocaleString()}
-                  </span>
-                )}
-                {keyword.difficulty && (
-                  <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                    KD: {keyword.difficulty}
-                  </span>
-                )}
-              </div>
-            </div>
           </div>
-        ))}
+        )}
       </div>
+      {/* Allocation UI goes here */}
     </div>
   );
 
@@ -418,11 +275,9 @@ how to improve SEO, informational, 890, 32"
             </button>
           )}
         </div>
-
         {view === 'upload' && renderUploadView()}
         {view === 'allocate' && renderAllocationView()}
       </div>
-      
       {/* Modal backdrop only when used as modal */}
       {onClose && (
         <div style={{
