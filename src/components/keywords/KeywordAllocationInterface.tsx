@@ -128,6 +128,30 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
     setBulkText('');
   };
 
+  // Select/deselect keywords
+  const toggleKeywordSelection = (keywordId: string) => {
+    setSelectedKeywords(prev =>
+      prev.includes(keywordId)
+        ? prev.filter(id => id !== keywordId)
+        : [...prev, keywordId]
+    );
+  };
+
+  // Allocate selected keywords to a team member
+  const allocateSelectedKeywords = () => {
+    if (!allocationTarget || selectedKeywords.length === 0) return;
+    setProcessing(true);
+    setTimeout(() => {
+      setKeywords(prev => prev.map(kw =>
+        selectedKeywords.includes(kw.id || kw._id)
+          ? { ...kw, allocatedTo: allocationTarget, role: allocationRole, status: 'allocated' as const }
+          : kw
+      ));
+      setSelectedKeywords([]);
+      setProcessing(false);
+    }, 1000);
+  };
+
   const renderUploadView = () => (
     <div>
       <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
@@ -196,6 +220,7 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
     </div>
   );
 
+  // Allocation UI
   const renderAllocationView = () => (
     <div>
       <div style={{ marginBottom: '1rem' }}>
@@ -203,24 +228,79 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
         {clientKeywords.length === 0 ? (
           <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>No onboarding keywords found for this client.</div>
         ) : (
-          <div style={{ maxHeight: '120px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '0.375rem', marginBottom: '1rem' }}>
+          <div style={{ maxHeight: '180px', overflowY: 'auto', border: '2px solid #6366f1', borderRadius: '0.5rem', marginBottom: '1rem', background: '#f5f3ff' }}>
             {clientKeywords.map((kw) => (
-              <div key={kw.id || kw._id} style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
+              <div key={kw.id || kw._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', borderBottom: '1px solid #e0e7ff', backgroundColor: selectedKeywords.includes(kw.id || kw._id) ? '#e0e7ff' : 'transparent', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'center', flex: 1 }} onClick={() => toggleKeywordSelection(kw.id || kw._id)}>
+                  <input type="checkbox" checked={selectedKeywords.includes(kw.id || kw._id)} readOnly style={{ marginRight: '0.75rem' }} />
+                  <span style={{ fontWeight: '500', marginRight: '0.5rem' }}>{kw.text}</span>
+                  {kw.isPrimary ? (
+                    <span style={{ marginRight: '0.5rem', background: '#dbeafe', color: '#2563eb', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '0.25rem' }}>Primary</span>
+                  ) : (
+                    <span style={{ marginRight: '0.5rem', background: '#dcfce7', color: '#059669', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '0.25rem' }}>Seed</span>
+                  )}
+                  {kw.intent && (
+                    <span style={{ marginRight: '0.5rem', background: '#f3f4f6', color: '#6b7280', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '0.25rem' }}>{kw.intent}</span>
+                  )}
+                  {kw.status && (
+                    <span style={{ marginRight: '0.5rem', background: '#ede9fe', color: '#7c3aed', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '0.25rem' }}>{kw.status}</span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '0.25rem' }}>
+                  <button onClick={() => alert('Edit keyword: ' + kw.text)} style={{ background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '0.25rem', padding: '2px 8px', cursor: 'pointer', fontSize: '0.75rem' }}>Edit</button>
+                  <button onClick={() => setClientKeywords(clientKeywords.filter(k => (k.id || k._id) !== (kw.id || kw._id)))} style={{ background: '#fee2e2', color: '#b91c1c', border: 'none', borderRadius: '0.25rem', padding: '2px 8px', cursor: 'pointer', fontSize: '0.75rem' }}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div style={{ marginBottom: '1rem' }}>
+        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.5rem' }}>Uploaded Keywords</h4>
+        {keywords.length === 0 ? (
+          <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>No uploaded keywords.</div>
+        ) : (
+          <div style={{ maxHeight: '120px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '0.375rem', marginBottom: '1rem' }}>
+            {keywords.map((kw) => (
+              <div key={kw.id || kw._id} style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', backgroundColor: selectedKeywords.includes(kw.id || kw._id) ? '#eff6ff' : 'white', cursor: 'pointer' }} onClick={() => toggleKeywordSelection(kw.id || kw._id)}>
+                <input type="checkbox" checked={selectedKeywords.includes(kw.id || kw._id)} readOnly style={{ marginRight: '0.75rem' }} />
                 <span style={{ fontWeight: '500' }}>{kw.text}</span>
-                {kw.isPrimary ? (
-                  <span style={{ marginLeft: '0.5rem', color: '#3b82f6', fontSize: '0.75rem' }}>Primary</span>
-                ) : (
-                  <span style={{ marginLeft: '0.5rem', color: '#10b981', fontSize: '0.75rem' }}>Seed</span>
-                )}
                 {kw.intent && (
                   <span style={{ marginLeft: '0.5rem', color: '#6b7280', fontSize: '0.75rem' }}>{kw.intent}</span>
+                )}
+                {kw.status && (
+                  <span style={{ marginLeft: '0.5rem', color: '#6366f1', fontSize: '0.75rem' }}>{kw.status}</span>
                 )}
               </div>
             ))}
           </div>
         )}
       </div>
-      {/* Allocation UI goes here */}
+      <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 300px', marginBottom: '1rem' }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>Assign to Team Member</label>
+          <select value={allocationTarget} onChange={e => setAllocationTarget(e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}>
+            <option value="">Select team member...</option>
+            {teamMembers.map(member => (
+              <option key={member.id} value={member.id}>{member.name} ({member.role})</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>Role</label>
+          <select value={allocationRole} onChange={e => setAllocationRole(e.target.value as any)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}>
+            <option value="owner">Owner</option>
+            <option value="employee">Employee</option>
+            <option value="client">Client</option>
+          </select>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+        <button onClick={() => setSelectedKeywords([...clientKeywords.map(kw => kw.id || kw._id), ...keywords.map(kw => kw.id || kw._id)])} style={{ padding: '0.25rem 0.5rem', backgroundColor: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.75rem' }}>Select All</button>
+        <button onClick={() => setSelectedKeywords([])} style={{ padding: '0.25rem 0.5rem', backgroundColor: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.75rem' }}>Clear</button>
+        <button onClick={allocateSelectedKeywords} disabled={!allocationTarget || selectedKeywords.length === 0 || processing} style={{ padding: '0.25rem 0.5rem', backgroundColor: (!allocationTarget || selectedKeywords.length === 0 || processing) ? '#9ca3af' : '#4f46e5', color: 'white', border: 'none', borderRadius: '0.25rem', cursor: (!allocationTarget || selectedKeywords.length === 0 || processing) ? 'not-allowed' : 'pointer', fontSize: '0.75rem' }}>{processing ? 'Processing...' : 'Allocate'}</button>
+      </div>
+      <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>{selectedKeywords.length} keywords selected</div>
     </div>
   );
 
