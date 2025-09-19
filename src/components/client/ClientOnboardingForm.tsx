@@ -1,11 +1,30 @@
 import { useState } from 'react';
+import KeywordImport from '../keywords/KeywordImport';
+
+interface LocationData {
+  city: string;
+  state: string;
+  country: string;
+  zip: string;
+  radius: number;
+  radiusUnit: 'miles' | 'km';
+}
+
+interface KeywordData {
+  keyword: string;
+  searchVolume?: number;
+  difficulty?: number;
+  intent?: 'informational' | 'transactional' | 'navigational' | 'local';
+  source: 'csv' | 'gsc' | 'manual';
+}
 
 interface ClientFormData {
   name: string;
   industry: string;
-  locations: string[];
+  locations: LocationData[];
   services: string[];
   competitors: string[];
+  seedKeywords: KeywordData[];
   integrations: {
     googleSearchConsole: boolean;
     googleAnalytics: boolean;
@@ -23,9 +42,17 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
   const [formData, setFormData] = useState<ClientFormData>({
     name: '',
     industry: '',
-    locations: [''],
+    locations: [{
+      city: '',
+      state: '',
+      country: '',
+      zip: '',
+      radius: 25,
+      radiusUnit: 'miles'
+    }],
     services: [''],
     competitors: [''],
+    seedKeywords: [],
     integrations: {
       googleSearchConsole: false,
       googleAnalytics: false,
@@ -33,31 +60,67 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
     }
   });
 
-  const totalSteps = 5;
+  const totalSteps = 6;
 
   const updateFormData = (field: keyof ClientFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const addArrayItem = (field: 'locations' | 'services' | 'competitors') => {
+  const addArrayItem = (field: 'services' | 'competitors') => {
     setFormData(prev => ({
       ...prev,
       [field]: [...prev[field], '']
     }));
   };
 
-  const updateArrayItem = (field: 'locations' | 'services' | 'competitors', index: number, value: string) => {
+  const addLocationItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      locations: [...prev.locations, {
+        city: '',
+        state: '',
+        country: '',
+        zip: '',
+        radius: 25,
+        radiusUnit: 'miles'
+      }]
+    }));
+  };
+
+  const updateArrayItem = (field: 'services' | 'competitors', index: number, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: prev[field].map((item, i) => i === index ? value : item)
     }));
   };
 
-  const removeArrayItem = (field: 'locations' | 'services' | 'competitors', index: number) => {
+  const updateLocationItem = (index: number, field: keyof LocationData, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      locations: prev.locations.map((item, i) => i === index ? { ...item, [field]: value } : item)
+    }));
+  };
+
+  const removeArrayItem = (field: 'services' | 'competitors', index: number) => {
     setFormData(prev => ({
       ...prev,
       [field]: prev[field].filter((_, i) => i !== index)
     }));
+  };
+
+  const removeLocationItem = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      locations: prev.locations.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleKeywordsImported = (keywords: KeywordData[]) => {
+    setFormData(prev => ({
+      ...prev,
+      seedKeywords: keywords
+    }));
+    nextStep(); // Automatically proceed to next step after import
   };
 
   const nextStep = () => {
@@ -76,9 +139,10 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
     // Filter out empty array items
     const cleanedData = {
       ...formData,
-      locations: formData.locations.filter(item => item.trim()),
+      locations: formData.locations.filter(item => item.city.trim()),
       services: formData.services.filter(item => item.trim()),
       competitors: formData.competitors.filter(item => item.trim()),
+      seedKeywords: formData.seedKeywords, // Keep all imported keywords
     };
     onComplete(cleanedData);
   };
@@ -146,43 +210,150 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
               Business Locations
             </h3>
             <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
-              Add all locations where your business operates (cities, regions, countries)
+              Add all locations where your business operates with radius for local SEO targeting
             </p>
             {formData.locations.map((location, index) => (
-              <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => updateArrayItem('locations', index, e.target.value)}
-                  style={{ 
-                    flex: 1, 
-                    padding: '0.5rem', 
-                    border: '1px solid #d1d5db', 
-                    borderRadius: '0.375rem' 
-                  }}
-                  placeholder="Enter location"
-                />
-                {formData.locations.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeArrayItem('locations', index)}
-                    style={{ 
-                      padding: '0.5rem', 
-                      backgroundColor: '#ef4444', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '0.375rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Remove
-                  </button>
-                )}
+              <div key={index} style={{ 
+                border: '1px solid #d1d5db', 
+                borderRadius: '0.5rem', 
+                padding: '1rem', 
+                marginBottom: '1rem',
+                backgroundColor: '#f9fafb'
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                      City *
+                    </label>
+                    <input
+                      type="text"
+                      value={location.city}
+                      onChange={(e) => updateLocationItem(index, 'city', e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.5rem', 
+                        border: '1px solid #d1d5db', 
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem'
+                      }}
+                      placeholder="Enter city"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                      State/Province
+                    </label>
+                    <input
+                      type="text"
+                      value={location.state}
+                      onChange={(e) => updateLocationItem(index, 'state', e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.5rem', 
+                        border: '1px solid #d1d5db', 
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem'
+                      }}
+                      placeholder="State/Province"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                      Country
+                    </label>
+                    <input
+                      type="text"
+                      value={location.country}
+                      onChange={(e) => updateLocationItem(index, 'country', e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.5rem', 
+                        border: '1px solid #d1d5db', 
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem'
+                      }}
+                      placeholder="Country"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                      ZIP/Postal Code
+                    </label>
+                    <input
+                      type="text"
+                      value={location.zip}
+                      onChange={(e) => updateLocationItem(index, 'zip', e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.5rem', 
+                        border: '1px solid #d1d5db', 
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem'
+                      }}
+                      placeholder="ZIP/Postal Code"
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', alignItems: 'end' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                      Local SEO Radius *
+                    </label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input
+                        type="number"
+                        value={location.radius}
+                        onChange={(e) => updateLocationItem(index, 'radius', parseInt(e.target.value) || 25)}
+                        min="1"
+                        max="500"
+                        style={{ 
+                          flex: 1, 
+                          padding: '0.5rem', 
+                          border: '1px solid #d1d5db', 
+                          borderRadius: '0.375rem',
+                          fontSize: '0.875rem'
+                        }}
+                        placeholder="25"
+                      />
+                      <select
+                        value={location.radiusUnit}
+                        onChange={(e) => updateLocationItem(index, 'radiusUnit', e.target.value)}
+                        style={{ 
+                          padding: '0.5rem', 
+                          border: '1px solid #d1d5db', 
+                          borderRadius: '0.375rem',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        <option value="miles">Miles</option>
+                        <option value="km">KM</option>
+                      </select>
+                    </div>
+                  </div>
+                  {formData.locations.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeLocationItem(index)}
+                      style={{ 
+                        padding: '0.5rem', 
+                        backgroundColor: '#ef4444', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '0.375rem',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
             <button
               type="button"
-              onClick={() => addArrayItem('locations')}
+              onClick={addLocationItem}
               style={{ 
                 padding: '0.5rem 1rem', 
                 backgroundColor: '#10b981', 
@@ -320,6 +491,83 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
         return (
           <div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
+              Seed Keywords
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
+              Import your seed keywords to jumpstart your SEO strategy. You can import from CSV, 
+              Google Search Console, or enter them manually.
+            </p>
+            
+            {formData.seedKeywords.length > 0 ? (
+              <div>
+                <div style={{ 
+                  backgroundColor: '#f0f9ff', 
+                  border: '1px solid #0ea5e9', 
+                  borderRadius: '0.375rem', 
+                  padding: '1rem',
+                  marginBottom: '1rem'
+                }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.5rem', color: '#0ea5e9' }}>
+                    ✓ Keywords Imported Successfully
+                  </h4>
+                  <p style={{ fontSize: '0.875rem', color: '#0369a1' }}>
+                    {formData.seedKeywords.length} keywords have been imported and are ready for allocation.
+                  </p>
+                </div>
+                
+                <div style={{ marginBottom: '1rem' }}>
+                  <h5 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    Preview (first 10 keywords):
+                  </h5>
+                  <div style={{ 
+                    backgroundColor: '#f9fafb', 
+                    border: '1px solid #e5e7eb', 
+                    borderRadius: '0.375rem',
+                    padding: '0.75rem',
+                    fontSize: '0.875rem'
+                  }}>
+                    {formData.seedKeywords.slice(0, 10).map((kw, index) => (
+                      <div key={index} style={{ marginBottom: '0.25rem' }}>
+                        • {kw.keyword} {kw.searchVolume && `(${kw.searchVolume} searches)`}
+                      </div>
+                    ))}
+                    {formData.seedKeywords.length > 10 && (
+                      <div style={{ color: '#6b7280', fontStyle: 'italic' }}>
+                        ... and {formData.seedKeywords.length - 10} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, seedKeywords: [] }))}
+                  style={{ 
+                    padding: '0.5rem 1rem', 
+                    backgroundColor: '#f3f4f6', 
+                    color: '#374151', 
+                    border: 'none', 
+                    borderRadius: '0.375rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  Import Different Keywords
+                </button>
+              </div>
+            ) : (
+              <KeywordImport
+                onKeywordsImported={handleKeywordsImported}
+                onCancel={() => nextStep()} // Allow skipping this step
+              />
+            )}
+          </div>
+        );
+
+      case 6:
+        return (
+          <div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
               Tool Integrations
             </h3>
             <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
@@ -373,12 +621,14 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
       case 1:
         return formData.name.trim() && formData.industry;
       case 2:
-        return formData.locations.some(loc => loc.trim());
+        return formData.locations.some(loc => loc.city.trim());
       case 3:
         return formData.services.some(service => service.trim());
       case 4:
         return true; // Competitors are optional
       case 5:
+        return true; // Seed keywords are optional but recommended
+      case 6:
         return true; // Integrations are optional
       default:
         return false;
