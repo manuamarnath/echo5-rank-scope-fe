@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../src/components/auth/AuthContext';
 import MainLayout from '../src/components/layout/MainLayout';
 import ClientOnboardingForm from '../src/components/client/ClientOnboardingForm';
@@ -22,24 +22,86 @@ export default function ClientsPage() {
   const { user } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch clients from backend
+  const fetchClients = async () => {
+    try {
+      const response = await fetch('/api/clients/demo');
+      if (response.ok) {
+        const backendClients = await response.json();
+        const formattedClients = backendClients.map((client: any) => ({
+          id: client._id,
+          name: client.name,
+          industry: client.industry,
+          locations: client.locations?.map((loc: any) => `${loc.city}, ${loc.state}`) || [],
+          services: client.services || [],
+          competitors: client.competitors || [],
+          integrations: client.integrations || {
+            googleSearchConsole: false,
+            googleAnalytics: false,
+            googleBusinessProfile: false,
+          },
+          createdAt: client.createdAt || new Date().toISOString()
+        }));
+        setClients(formattedClients);
+      }
+    } catch (error) {
+      console.error('Failed to fetch clients:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load clients when component mounts
+  useEffect(() => {
+    fetchClients();
+  }, []);
 
   const handleClientComplete = async (clientData: any) => {
     try {
-      // Here we would typically call the backend API
-      // For now, just add to local state
+      console.log('Submitting client data:', clientData);
+      
+      // Call backend API to create client
+      const response = await fetch('/api/clients/demo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(clientData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create client');
+      }
+
+      const savedClient = await response.json();
+      console.log('Client saved successfully:', savedClient);
+
+      // Add to local state for immediate UI update
       const newClient: Client = {
-        id: Math.random().toString(36).substr(2, 9),
-        ...clientData,
-        createdAt: new Date().toISOString()
+        id: savedClient._id,
+        name: savedClient.name,
+        industry: savedClient.industry,
+        locations: savedClient.locations?.map((loc: any) => `${loc.city}, ${loc.state}`) || [],
+        services: savedClient.services || [],
+        competitors: savedClient.competitors || [],
+        integrations: savedClient.integrations || {
+          googleSearchConsole: false,
+          googleAnalytics: false,
+          googleBusinessProfile: false,
+        },
+        createdAt: savedClient.createdAt || new Date().toISOString()
       };
       
       setClients(prev => [...prev, newClient]);
       setShowOnboarding(false);
       
-      // TODO: Call backend API to create client
-      console.log('Created client:', newClient);
+      alert('Client created successfully!');
     } catch (error) {
       console.error('Failed to create client:', error);
+      alert(`Failed to create client: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -49,6 +111,16 @@ export default function ClientsPage() {
         onComplete={handleClientComplete}
         onCancel={() => setShowOnboarding(false)}
       />
+    );
+  }
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <div>Loading clients...</div>
+        </div>
+      </MainLayout>
     );
   }
 
