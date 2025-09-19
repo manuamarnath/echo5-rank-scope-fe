@@ -6,6 +6,7 @@ interface Keyword {
   text: string;
   intent?: string;
   searchVolume?: number;
+  volume?: number;
   difficulty?: number;
   geo?: string;
   allocatedTo?: string;
@@ -49,10 +50,19 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
   const [allocationTarget, setAllocationTarget] = useState('');
   const [allocationRole, setAllocationRole] = useState<'owner' | 'employee' | 'client'>('employee');
   const [processing, setProcessing] = useState(false);
-  const [view, setView] = useState<'upload' | 'allocate' | 'manage'>('upload');
+  const [view, setView] = useState<'upload' | 'allocate' | 'manage'>('manage');
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [clientKeywords, setClientKeywords] = useState<Keyword[]>([]);
+  const [editingKeyword, setEditingKeyword] = useState<Keyword | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [newKeyword, setNewKeyword] = useState({
+    text: '',
+    intent: 'informational',
+    geo: '',
+    volume: '',
+    difficulty: ''
+  });
 
   // Mock team members - in real app, this would come from API
   const teamMembers: TeamMember[] = [
@@ -101,6 +111,82 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
       }
     } catch (error) {
       setClientKeywords([]);
+    }
+  };
+
+  const createKeyword = async () => {
+    if (!selectedClientId || !newKeyword.text.trim()) return;
+    
+    try {
+      const response = await fetch('/api/keywords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: selectedClientId,
+          text: newKeyword.text.trim(),
+          intent: newKeyword.intent,
+          geo: newKeyword.geo || null,
+          volume: newKeyword.volume ? parseInt(newKeyword.volume) : null,
+          difficulty: newKeyword.difficulty ? parseInt(newKeyword.difficulty) : null
+        })
+      });
+
+      if (response.ok) {
+        setNewKeyword({ text: '', intent: 'informational', geo: '', volume: '', difficulty: '' });
+        fetchClientKeywords(selectedClientId);
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to create keyword');
+      }
+    } catch (error) {
+      alert('Failed to create keyword');
+    }
+  };
+
+  const updateKeyword = async () => {
+    if (!editingKeyword) return;
+    
+    try {
+      const response = await fetch(`/api/keywords/${editingKeyword._id || editingKeyword.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: editingKeyword.text,
+          intent: editingKeyword.intent,
+          geo: editingKeyword.geo,
+          volume: editingKeyword.searchVolume,
+          difficulty: editingKeyword.difficulty
+        })
+      });
+
+      if (response.ok) {
+        setEditingKeyword(null);
+        setIsEditModalOpen(false);
+        fetchClientKeywords(selectedClientId);
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to update keyword');
+      }
+    } catch (error) {
+      alert('Failed to update keyword');
+    }
+  };
+
+  const deleteKeyword = async (keywordId: string) => {
+    if (!confirm('Are you sure you want to delete this keyword?')) return;
+    
+    try {
+      const response = await fetch(`/api/keywords/${keywordId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        fetchClientKeywords(selectedClientId);
+      } else {
+        alert('Failed to delete keyword');
+      }
+    } catch (error) {
+      alert('Failed to delete keyword');
     }
   };
 
@@ -220,6 +306,286 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
     </div>
   );
 
+  const renderManageView = () => (
+    <div>
+      <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
+        Manage Keywords
+      </h3>
+      
+      {/* Client Selection */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+          Select Client
+        </label>
+        <select
+          value={selectedClientId}
+          onChange={e => setSelectedClientId(e.target.value)}
+          style={{ 
+            width: '100%', 
+            padding: '0.5rem', 
+            border: '1px solid #d1d5db', 
+            borderRadius: '0.375rem'
+          }}
+        >
+          <option value="">Select client...</option>
+          {clients.map(client => (
+            <option key={client._id} value={client._id}>{client.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {selectedClientId && (
+        <>
+          {/* Add New Keyword Form */}
+          <div style={{ 
+            backgroundColor: '#f9fafb', 
+            padding: '1rem', 
+            borderRadius: '0.5rem', 
+            marginBottom: '1.5rem',
+            border: '1px solid #e5e7eb'
+          }}>
+            <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem' }}>
+              Add New Keyword
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr auto', gap: '0.5rem', alignItems: 'end' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                  Keyword
+                </label>
+                <input
+                  type="text"
+                  value={newKeyword.text}
+                  onChange={e => setNewKeyword(prev => ({ ...prev, text: e.target.value }))}
+                  placeholder="Enter keyword..."
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                  Intent
+                </label>
+                <select
+                  value={newKeyword.intent}
+                  onChange={e => setNewKeyword(prev => ({ ...prev, intent: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  <option value="informational">Informational</option>
+                  <option value="transactional">Transactional</option>
+                  <option value="navigational">Navigational</option>
+                  <option value="commercial">Commercial</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                  Volume
+                </label>
+                <input
+                  type="number"
+                  value={newKeyword.volume}
+                  onChange={e => setNewKeyword(prev => ({ ...prev, volume: e.target.value }))}
+                  placeholder="0"
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                  Difficulty
+                </label>
+                <input
+                  type="number"
+                  value={newKeyword.difficulty}
+                  onChange={e => setNewKeyword(prev => ({ ...prev, difficulty: e.target.value }))}
+                  placeholder="0"
+                  min="0"
+                  max="100"
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                  Location
+                </label>
+                <input
+                  type="text"
+                  value={newKeyword.geo}
+                  onChange={e => setNewKeyword(prev => ({ ...prev, geo: e.target.value }))}
+                  placeholder="Location"
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+              <button
+                onClick={createKeyword}
+                disabled={!newKeyword.text.trim()}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: newKeyword.text.trim() ? '#3b82f6' : '#9ca3af',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.375rem',
+                  cursor: newKeyword.text.trim() ? 'pointer' : 'not-allowed',
+                  fontSize: '0.875rem',
+                  fontWeight: '500'
+                }}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+
+          {/* Keywords List */}
+          <div>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              marginBottom: '1rem' 
+            }}>
+              <h4 style={{ fontSize: '1rem', fontWeight: '600' }}>
+                Keywords ({clientKeywords.length})
+              </h4>
+            </div>
+
+            {clientKeywords.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '2rem', 
+                color: '#6b7280',
+                backgroundColor: '#f9fafb',
+                borderRadius: '0.5rem',
+                border: '1px solid #e5e7eb'
+              }}>
+                No keywords found for this client. Add your first keyword above.
+              </div>
+            ) : (
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', overflow: 'hidden' }}>
+                {/* Table Header */}
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 120px', 
+                  gap: '1rem',
+                  padding: '0.75rem',
+                  backgroundColor: '#f9fafb',
+                  borderBottom: '1px solid #e5e7eb',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151'
+                }}>
+                  <div>Keyword</div>
+                  <div>Intent</div>
+                  <div>Volume</div>
+                  <div>Difficulty</div>
+                  <div>Location</div>
+                  <div>Actions</div>
+                </div>
+
+                {/* Table Rows */}
+                {clientKeywords.map((keyword, index) => (
+                  <div 
+                    key={keyword._id || keyword.id} 
+                    style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 120px', 
+                      gap: '1rem',
+                      padding: '0.75rem',
+                      borderBottom: index < clientKeywords.length - 1 ? '1px solid #e5e7eb' : 'none',
+                      backgroundColor: 'white',
+                      fontSize: '0.875rem',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <div style={{ fontWeight: '500' }}>{keyword.text}</div>
+                    <div style={{ color: '#6b7280' }}>
+                      <span style={{
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '0.375rem',
+                        backgroundColor: keyword.intent === 'transactional' ? '#dbeafe' : 
+                                       keyword.intent === 'commercial' ? '#fef3c7' : 
+                                       keyword.intent === 'navigational' ? '#e0e7ff' : '#f3f4f6',
+                        color: keyword.intent === 'transactional' ? '#1e40af' : 
+                               keyword.intent === 'commercial' ? '#92400e' : 
+                               keyword.intent === 'navigational' ? '#3730a3' : '#374151',
+                        fontSize: '0.75rem',
+                        fontWeight: '500'
+                      }}>
+                        {keyword.intent || 'informational'}
+                      </span>
+                    </div>
+                    <div style={{ color: '#6b7280' }}>{keyword.volume || keyword.searchVolume || '-'}</div>
+                    <div style={{ color: '#6b7280' }}>{keyword.difficulty || '-'}</div>
+                    <div style={{ color: '#6b7280' }}>{keyword.geo || '-'}</div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => {
+                          setEditingKeyword({...keyword, searchVolume: keyword.volume || keyword.searchVolume});
+                          setIsEditModalOpen(true);
+                        }}
+                        style={{
+                          padding: '0.25rem 0.5rem',
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.25rem',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem'
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deleteKeyword(keyword._id || keyword.id)}
+                        style={{
+                          padding: '0.25rem 0.5rem',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.25rem',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem'
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
   // Allocation UI
   const renderAllocationView = () => (
     <div>
@@ -304,6 +670,185 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
     </div>
   );
 
+  const renderEditModal = () => {
+    if (!isEditModalOpen || !editingKeyword) return null;
+
+    return (
+      <>
+        {/* Modal Backdrop */}
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 1001
+          }}
+          onClick={() => setIsEditModalOpen(false)}
+        />
+        
+        {/* Modal Content */}
+        <div style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          backgroundColor: 'white',
+          borderRadius: '0.5rem',
+          padding: '1.5rem',
+          width: '90%',
+          maxWidth: '500px',
+          zIndex: 1002,
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+        }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
+            Edit Keyword
+          </h3>
+          
+          <div style={{ display: 'grid', gap: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                Keyword
+              </label>
+              <input
+                type="text"
+                value={editingKeyword.text}
+                onChange={e => setEditingKeyword(prev => ({ ...prev!, text: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.375rem',
+                  fontSize: '0.875rem'
+                }}
+              />
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                  Intent
+                </label>
+                <select
+                  value={editingKeyword.intent || 'informational'}
+                  onChange={e => setEditingKeyword(prev => ({ ...prev!, intent: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  <option value="informational">Informational</option>
+                  <option value="transactional">Transactional</option>
+                  <option value="navigational">Navigational</option>
+                  <option value="commercial">Commercial</option>
+                </select>
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                  Location
+                </label>
+                <input
+                  type="text"
+                  value={editingKeyword.geo || ''}
+                  onChange={e => setEditingKeyword(prev => ({ ...prev!, geo: e.target.value }))}
+                  placeholder="Location"
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                  Search Volume
+                </label>
+                <input
+                  type="number"
+                  value={editingKeyword.searchVolume || ''}
+                  onChange={e => setEditingKeyword(prev => ({ ...prev!, searchVolume: e.target.value ? parseInt(e.target.value) : undefined }))}
+                  placeholder="0"
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                  Difficulty (0-100)
+                </label>
+                <input
+                  type="number"
+                  value={editingKeyword.difficulty || ''}
+                  onChange={e => setEditingKeyword(prev => ({ ...prev!, difficulty: e.target.value ? parseInt(e.target.value) : undefined }))}
+                  placeholder="0"
+                  min="0"
+                  max="100"
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setIsEditModalOpen(false)}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#f3f4f6',
+                color: '#374151',
+                border: 'none',
+                borderRadius: '0.375rem',
+                cursor: 'pointer',
+                fontSize: '0.875rem'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={updateKeyword}
+              disabled={!editingKeyword.text.trim()}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: editingKeyword.text.trim() ? '#3b82f6' : '#9ca3af',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.375rem',
+                cursor: editingKeyword.text.trim() ? 'pointer' : 'not-allowed',
+                fontSize: '0.875rem',
+                fontWeight: '500'
+              }}
+            >
+              Update
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  };
+
   return (
     <div style={{ 
       backgroundColor: '#F9FAFB',
@@ -355,8 +900,49 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
             </button>
           )}
         </div>
+
+        {/* Navigation Tabs */}
+        <div style={{ 
+          borderBottom: '1px solid #e5e7eb', 
+          marginBottom: '2rem' 
+        }}>
+          <nav style={{ display: 'flex', gap: '2rem' }}>
+            {[
+              { id: 'manage', label: 'Manage Keywords', icon: '📝' },
+              { id: 'upload', label: 'Upload Keywords', icon: '📤' },
+              { id: 'allocate', label: 'Allocate Keywords', icon: '🎯' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setView(tab.id as any)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '1rem 0',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  borderBottom: view === tab.id ? '2px solid #3b82f6' : '2px solid transparent',
+                  color: view === tab.id ? '#3b82f6' : '#6b7280',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <span style={{ fontSize: '1.25rem' }}>{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {view === 'manage' && renderManageView()}
         {view === 'upload' && renderUploadView()}
         {view === 'allocate' && renderAllocationView()}
+        
+        {/* Edit Modal */}
+        {renderEditModal()}
       </div>
       {/* Modal backdrop only when used as modal */}
       {onClose && (

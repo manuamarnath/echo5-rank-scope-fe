@@ -44,9 +44,11 @@ export default function BriefGenerationInterface() {
   const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'templates'>('create');
   const [briefs, setBriefs] = useState<Brief[]>([]);
   const [keywords, setKeywords] = useState<Keyword[]>([]);
+  const [clients, setClients] = useState<{_id: string, name: string}[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [aiService] = useState(() => new AIContentService());
+  const [generatedContent, setGeneratedContent] = useState<string>('');
   const [newBrief, setNewBrief] = useState<Partial<Brief>>({
     title: '',
     targetKeyword: '',
@@ -65,75 +67,85 @@ export default function BriefGenerationInterface() {
   });
 
   useEffect(() => {
-    loadKeywords();
-    loadBriefs();
+    fetchClients();
+    setBriefs([]);
   }, []);
 
-  const loadKeywords = async () => {
-    // Mock keywords - replace with API call
-    setKeywords([
-      { id: '1', keyword: 'SEO optimization tools', searchVolume: 2400, difficulty: 65, status: 'assigned' },
-      { id: '2', keyword: 'keyword research software', searchVolume: 1800, difficulty: 70, status: 'pending' },
-      { id: '3', keyword: 'content marketing strategy', searchVolume: 3200, difficulty: 55, status: 'in-progress' },
-      { id: '4', keyword: 'local SEO services', searchVolume: 1600, difficulty: 45, status: 'completed' },
-    ]);
-  };
+  useEffect(() => {
+    if (selectedClientId) fetchClientKeywords(selectedClientId);
+  }, [selectedClientId]);
 
-  const loadBriefs = async () => {
-    // Mock briefs - replace with API call
-    setBriefs([
-      {
-        id: '1',
-        title: 'Complete Guide to SEO Optimization Tools',
-        targetKeyword: 'SEO optimization tools',
-        secondaryKeywords: ['SEO software', 'keyword tools', 'ranking tools'],
-        url: '/blog/seo-optimization-tools-guide',
-        contentType: 'guide',
-        wordCount: 2500,
-        tone: 'professional',
-        targetAudience: 'Marketing professionals and agencies',
-        outline: [
-          'Introduction to SEO Tools',
-          'Keyword Research Tools',
-          'Technical SEO Tools',
-          'Content Optimization Tools',
-          'Ranking Monitoring Tools',
-          'Conclusion and Recommendations'
-        ],
-        metaTitle: 'Best SEO Optimization Tools 2024 - Complete Guide',
-        metaDescription: 'Discover the top SEO optimization tools for 2024. Compare features, pricing, and benefits to boost your search rankings.',
-        assignedTo: 'sarah@agency.com',
-        dueDate: '2024-01-15',
-        status: 'in-progress',
-        createdAt: '2024-01-01',
-        notes: 'Include screenshots of each tool interface'
-      }
-    ]);
-  };
-
-  const analyzeCompetitors = async (keyword: string) => {
-    setIsGenerating(true);
+  const fetchClients = async () => {
     try {
-      // Mock competitor analysis - replace with real SERP API
-      const mockCompetitors: Competitor[] = [
-        {
-          url: 'https://competitor1.com/seo-tools',
-          title: 'Top 10 SEO Tools for 2024',
-          wordCount: 3200,
-          headings: ['Introduction', 'Keyword Research', 'Technical SEO', 'Content Optimization'],
-          metaDescription: 'Discover the best SEO tools to improve your rankings'
-        },
-        {
-          url: 'https://competitor2.com/seo-software',
-          title: 'Best SEO Software Review',
-          wordCount: 2800,
-          headings: ['Overview', 'Tool Comparison', 'Pricing Analysis', 'Recommendations'],
-          metaDescription: 'Compare top SEO software solutions for your business'
-        }
-      ];
-      setCompetitors(mockCompetitors);
+      const response = await fetch('/api/clients/demo');
+      if (response.ok) {
+        const data = await response.json();
+        setClients(data.map((c: any) => ({ _id: c._id, name: c.name })));
+      }
     } catch (error) {
-      console.error('Error analyzing competitors:', error);
+      setClients([]);
+    }
+  };
+
+  const fetchClientKeywords = async (clientId: string) => {
+    try {
+      const response = await fetch(`/api/keywords?clientId=${clientId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setKeywords(data.map((k: any) => ({
+          id: k._id || k.id,
+          keyword: k.text || k.keyword,
+          searchVolume: k.volume || k.searchVolume || 0,
+          difficulty: k.difficulty || 0,
+          status: k.status || 'pending',
+        })));
+      } else {
+        setKeywords([]);
+      }
+    } catch (error) {
+      setKeywords([]);
+    }
+  };
+
+  const generateFullContent = async () => {
+    setIsGenerating(true);
+    setGeneratedContent('');
+    try {
+      const prompt = `Generate a complete SEO-optimized ${newBrief.contentType} for the following brief:\n\n` +
+        `Title: ${newBrief.title}\n` +
+        `Target Keyword: ${newBrief.targetKeyword}\n` +
+        `Secondary Keywords: ${(newBrief.secondaryKeywords || []).join(', ')}\n` +
+        `URL: ${newBrief.url}\n` +
+        `Word Count: ${newBrief.wordCount}\n` +
+        `Tone: ${newBrief.tone}\n` +
+        `Target Audience: ${newBrief.targetAudience}\n` +
+        `Outline: ${(newBrief.outline || []).join(' | ')}\n` +
+        `Meta Title: ${newBrief.metaTitle}\n` +
+        `Meta Description: ${newBrief.metaDescription}\n` +
+        `Notes: ${newBrief.notes}`;
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            { role: 'system', content: 'You are an expert SEO content writer.' },
+            { role: 'user', content: prompt }
+          ],
+          max_tokens: 2048,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) throw new Error('OpenAI API error: ' + response.statusText);
+      const data = await response.json();
+      setGeneratedContent(data.choices[0].message.content);
+    } catch (error) {
+      setGeneratedContent('Error generating content: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsGenerating(false);
     }
@@ -141,33 +153,11 @@ export default function BriefGenerationInterface() {
 
   const generateKeywordSuggestions = async () => {
     if (!newBrief.targetKeyword) return;
-    
     setIsGenerating(true);
     try {
-      const response = await aiService.generateKeywordSuggestions({
-        seedKeyword: newBrief.targetKeyword,
-        industry: 'Digital Marketing', // Could be dynamic based on client
-        intent: 'informational'
-      });
-      
-      // Update keywords list with suggestions
-      const suggestedKeywords = response.primaryKeywords.map((kw, index) => ({
-        id: `suggested-${index}`,
-        keyword: kw.keyword,
-        searchVolume: kw.searchVolume,
-        difficulty: kw.difficulty,
-        status: 'pending' as const
-      }));
-      
-      setKeywords(prev => [...prev, ...suggestedKeywords]);
-      
-      // Auto-populate secondary keywords
-      setNewBrief(prev => ({
-        ...prev,
-        secondaryKeywords: response.semanticKeywords.slice(0, 5)
-      }));
+      // Add keyword generation logic here
     } catch (error) {
-      console.error('Error generating keyword suggestions:', error);
+      console.error('Error generating keywords:', error);
     } finally {
       setIsGenerating(false);
     }
@@ -175,73 +165,46 @@ export default function BriefGenerationInterface() {
 
   const generateAIOutline = async () => {
     if (!newBrief.targetKeyword) return;
-    
     setIsGenerating(true);
     try {
-      const response = await aiService.generateContentOutline({
-        targetKeyword: newBrief.targetKeyword,
-        contentType: newBrief.contentType || 'blog',
-        wordCount: newBrief.wordCount || 1500,
-        tone: newBrief.tone || 'professional',
-        targetAudience: newBrief.targetAudience || '',
-        competitors: competitors
-      });
-      
-      setNewBrief(prev => ({
-        ...prev,
-        outline: response.outline,
-        metaTitle: response.metaTitle,
-        metaDescription: response.metaDescription,
-        secondaryKeywords: response.suggestions.secondaryKeywords
-      }));
+      // Add outline generation logic here
     } catch (error) {
-      console.error('Error generating AI outline:', error);
+      console.error('Error generating outline:', error);
     } finally {
       setIsGenerating(false);
     }
   };
 
   const saveBrief = async () => {
-    if (!newBrief.title || !newBrief.targetKeyword) return;
-
-    const brief: Brief = {
-      id: Date.now().toString(),
-      title: newBrief.title!,
-      targetKeyword: newBrief.targetKeyword!,
-      secondaryKeywords: newBrief.secondaryKeywords || [],
-      url: newBrief.url || '',
-      contentType: newBrief.contentType || 'blog',
-      wordCount: newBrief.wordCount || 1500,
-      tone: newBrief.tone || 'professional',
-      targetAudience: newBrief.targetAudience || '',
-      outline: newBrief.outline || [],
-      metaTitle: newBrief.metaTitle || '',
-      metaDescription: newBrief.metaDescription || '',
-      assignedTo: newBrief.assignedTo || '',
-      dueDate: newBrief.dueDate || '',
-      status: 'draft',
-      createdAt: new Date().toISOString(),
-      notes: newBrief.notes || ''
-    };
-
-    setBriefs(prev => [brief, ...prev]);
-    setNewBrief({
-      title: '',
-      targetKeyword: '',
-      secondaryKeywords: [],
-      url: '',
-      contentType: 'blog',
-      wordCount: 1500,
-      tone: 'professional',
-      targetAudience: '',
-      outline: [],
-      metaTitle: '',
-      metaDescription: '',
-      assignedTo: '',
-      dueDate: '',
-      notes: ''
-    });
-    setCompetitors([]);
+    try {
+      const briefToSave = {
+        ...newBrief,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        status: 'draft' as const
+      };
+      setBriefs(prev => [...prev, briefToSave as Brief]);
+      
+      // Reset form
+      setNewBrief({
+        title: '',
+        targetKeyword: '',
+        secondaryKeywords: [],
+        url: '',
+        contentType: 'blog',
+        wordCount: 1500,
+        tone: 'professional',
+        targetAudience: '',
+        outline: [],
+        metaTitle: '',
+        metaDescription: '',
+        assignedTo: '',
+        dueDate: '',
+        notes: ''
+      });
+    } catch (error) {
+      console.error('Error saving brief:', error);
+    }
   };
 
   const updateBriefStatus = (briefId: string, status: Brief['status']) => {
@@ -265,24 +228,27 @@ export default function BriefGenerationInterface() {
     }
   };
 
+  // --- Tab Renderers ---
   const renderCreateBrief = () => (
     <div style={{ padding: '24px' }}>
       <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '24px', color: '#1F2937' }}>
         Create Content Brief
       </h2>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-        {/* Left Column - Brief Details */}
-        <div>
-          <div style={{ marginBottom: '20px' }}>
+      {/* Client and Keyword Selection */}
+      <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: '#F3F4F6', borderRadius: '8px' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#1F2937' }}>
+          Client & Keywords
+        </h3>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          <div>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
-              Brief Title *
+              Select Client
             </label>
-            <input
-              type="text"
-              value={newBrief.title}
-              onChange={(e) => setNewBrief(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="Enter brief title..."
+            <select
+              value={selectedClientId}
+              onChange={(e) => setSelectedClientId(e.target.value)}
               style={{
                 width: '100%',
                 padding: '12px',
@@ -290,59 +256,64 @@ export default function BriefGenerationInterface() {
                 borderRadius: '8px',
                 fontSize: '14px'
               }}
-            />
+            >
+              <option value="">Choose a client...</option>
+              {clients.map(client => (
+                <option key={client._id} value={client._id}>
+                  {client.name}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
+          <div>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
-              Target Keyword *
+              Select Target Keyword
             </label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <select
-                value={newBrief.targetKeyword}
-                onChange={(e) => setNewBrief(prev => ({ ...prev, targetKeyword: e.target.value }))}
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '8px',
-                  fontSize: '14px'
-                }}
-              >
-                <option value="">Select keyword...</option>
-                {keywords.map(keyword => (
-                  <option key={keyword.id} value={keyword.keyword}>
-                    {keyword.keyword} ({keyword.searchVolume} vol)
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() => newBrief.targetKeyword && analyzeCompetitors(newBrief.targetKeyword)}
-                disabled={!newBrief.targetKeyword || isGenerating}
-                style={{
-                  padding: '12px 16px',
-                  backgroundColor: newBrief.targetKeyword ? '#3B82F6' : '#9CA3AF',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  cursor: newBrief.targetKeyword ? 'pointer' : 'not-allowed'
-                }}
-              >
-                Analyze
-              </button>
-            </div>
+            <select
+              value={newBrief.targetKeyword}
+              onChange={(e) => setNewBrief(prev => ({ ...prev, targetKeyword: e.target.value }))}
+              disabled={!selectedClientId || keywords.length === 0}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #D1D5DB',
+                borderRadius: '8px',
+                fontSize: '14px',
+                opacity: !selectedClientId || keywords.length === 0 ? 0.5 : 1
+              }}
+            >
+              <option value="">Choose a keyword...</option>
+              {keywords.map(keyword => (
+                <option key={keyword.id} value={keyword.keyword}>
+                  {keyword.keyword} (Vol: {keyword.searchVolume}, Diff: {keyword.difficulty})
+                </option>
+              ))}
+            </select>
           </div>
+        </div>
 
+        {selectedClientId && keywords.length === 0 && (
+          <div style={{ padding: '12px', backgroundColor: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: '8px' }}>
+            <p style={{ fontSize: '14px', color: '#92400E', margin: 0 }}>
+              No keywords found for this client. Please add keywords in the Keywords section first.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
+        {/* Left Column - Brief Form */}
+        <div>
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
-              URL Slug
+              Brief Title
             </label>
             <input
               type="text"
-              value={newBrief.url}
-              onChange={(e) => setNewBrief(prev => ({ ...prev, url: e.target.value }))}
-              placeholder="/blog/your-article-slug"
+              value={newBrief.title}
+              onChange={(e) => setNewBrief(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="Enter brief title..."
               style={{
                 width: '100%',
                 padding: '12px',
@@ -375,6 +346,7 @@ export default function BriefGenerationInterface() {
                 <option value="guide">Guide</option>
               </select>
             </div>
+
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
                 Word Count
@@ -416,14 +388,16 @@ export default function BriefGenerationInterface() {
                 <option value="conversational">Conversational</option>
               </select>
             </div>
+
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
-                Due Date
+                Target URL
               </label>
               <input
-                type="date"
-                value={newBrief.dueDate}
-                onChange={(e) => setNewBrief(prev => ({ ...prev, dueDate: e.target.value }))}
+                type="url"
+                value={newBrief.url}
+                onChange={(e) => setNewBrief(prev => ({ ...prev, url: e.target.value }))}
+                placeholder="https://example.com/page"
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -443,7 +417,7 @@ export default function BriefGenerationInterface() {
               type="text"
               value={newBrief.targetAudience}
               onChange={(e) => setNewBrief(prev => ({ ...prev, targetAudience: e.target.value }))}
-              placeholder="e.g., Marketing professionals, Small business owners..."
+              placeholder="Describe your target audience..."
               style={{
                 width: '100%',
                 padding: '12px',
@@ -454,101 +428,52 @@ export default function BriefGenerationInterface() {
             />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
-              Secondary Keywords
-            </label>
-            <div style={{ border: '1px solid #D1D5DB', borderRadius: '8px', padding: '12px', minHeight: '80px' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                {newBrief.secondaryKeywords && newBrief.secondaryKeywords.map((keyword, index) => (
-                  <span
-                    key={index}
-                    style={{
-                      backgroundColor: '#EBF4FF',
-                      color: '#3B82F6',
-                      padding: '4px 8px',
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    {keyword}
-                    <button
-                      onClick={() => {
-                        setNewBrief(prev => ({
-                          ...prev,
-                          secondaryKeywords: prev.secondaryKeywords?.filter((_, i) => i !== index) || []
-                        }));
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#3B82F6',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        padding: '0',
-                        lineHeight: '1'
-                      }}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <input
-                type="text"
-                placeholder="Add secondary keywords (press Enter)"
-                style={{
-                  width: '100%',
-                  border: 'none',
-                  outline: 'none',
-                  fontSize: '14px',
-                  color: '#374151'
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const input = e.target as HTMLInputElement;
-                    const keyword = input.value.trim();
-                    if (keyword && !newBrief.secondaryKeywords?.includes(keyword)) {
-                      setNewBrief(prev => ({
-                        ...prev,
-                        secondaryKeywords: [...(prev.secondaryKeywords || []), keyword]
-                      }));
-                      input.value = '';
-                    }
-                  }
-                }}
-              />
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
-              Assign To
-            </label>
-            <select
-              value={newBrief.assignedTo}
-              onChange={(e) => setNewBrief(prev => ({ ...prev, assignedTo: e.target.value }))}
+          {/* Action Buttons */}
+          <div style={{ marginTop: '32px', display: 'flex', gap: '12px' }}>
+            <button
+              onClick={saveBrief}
+              disabled={!newBrief.title || !newBrief.targetKeyword}
               style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #D1D5DB',
+                padding: '12px 24px',
+                backgroundColor: newBrief.title && newBrief.targetKeyword ? '#10B981' : '#9CA3AF',
+                color: 'white',
+                border: 'none',
                 borderRadius: '8px',
-                fontSize: '14px'
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: newBrief.title && newBrief.targetKeyword ? 'pointer' : 'not-allowed'
               }}
             >
-              <option value="">Select team member...</option>
-              <option value="sarah@agency.com">Sarah (Content Writer)</option>
-              <option value="mike@agency.com">Mike (SEO Specialist)</option>
-              <option value="jenny@agency.com">Jenny (Content Manager)</option>
-            </select>
+              Create Brief
+            </button>
+            <button
+              onClick={generateFullContent}
+              disabled={isGenerating || !newBrief.title || !newBrief.targetKeyword}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#3B82F6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: isGenerating || !newBrief.title || !newBrief.targetKeyword ? 'not-allowed' : 'pointer',
+                opacity: isGenerating || !newBrief.title || !newBrief.targetKeyword ? 0.6 : 1
+              }}
+            >
+              {isGenerating ? 'Generating...' : '✨ Generate Content (OpenAI 3.5)'}
+            </button>
           </div>
+
+          {generatedContent && (
+            <div style={{ marginTop: '32px', background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '24px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '12px', color: '#1F2937' }}>Generated Content</h3>
+              <pre style={{ whiteSpace: 'pre-wrap', fontSize: '15px', color: '#374151' }}>{generatedContent}</pre>
+            </div>
+          )}
         </div>
 
-        {/* Right Column - AI Assistant & Outline */}
+        {/* Right Column - AI Assistant */}
         <div>
           <div style={{ 
             backgroundColor: '#F9FAFB', 
@@ -600,173 +525,8 @@ export default function BriefGenerationInterface() {
                 {isGenerating ? 'Generating...' : '📝 Generate Outline'}
               </button>
             </div>
-            
-            <div style={{ fontSize: '12px', color: '#6B7280', lineHeight: '1.4' }}>
-              <p style={{ marginBottom: '8px' }}>
-                <strong>Keyword Generator:</strong> Discover related keywords and semantic terms for your content.
-              </p>
-              <p>
-                <strong>Outline Generator:</strong> AI will analyze your target keyword and create an optimized content structure with meta data.
-              </p>
-            </div>
-          </div>
-
-          {competitors.length > 0 && (
-            <div style={{ 
-              backgroundColor: '#FEF3C7', 
-              border: '1px solid #F59E0B', 
-              borderRadius: '12px', 
-              padding: '16px',
-              marginBottom: '20px'
-            }}>
-              <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#92400E' }}>
-                Competitor Analysis
-              </h4>
-              {competitors.map((comp, index) => (
-                <div key={index} style={{ marginBottom: '8px', fontSize: '12px', color: '#92400E' }}>
-                  <strong>{comp.title}</strong> - {comp.wordCount} words
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
-              Content Outline
-            </label>
-            <div style={{ border: '1px solid #D1D5DB', borderRadius: '8px', padding: '12px', minHeight: '200px' }}>
-              {newBrief.outline && newBrief.outline.length > 0 ? (
-                <ol style={{ margin: 0, paddingLeft: '20px' }}>
-                  {newBrief.outline.map((item, index) => (
-                    <li key={index} style={{ marginBottom: '8px', fontSize: '14px', color: '#374151' }}>
-                      {item}
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p style={{ color: '#9CA3AF', fontSize: '14px' }}>
-                  Use AI assistant to generate an outline or add items manually...
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
-              Meta Title
-            </label>
-            <input
-              type="text"
-              value={newBrief.metaTitle}
-              onChange={(e) => setNewBrief(prev => ({ ...prev, metaTitle: e.target.value }))}
-              placeholder="SEO-optimized title (60 chars max)"
-              maxLength={60}
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #D1D5DB',
-                borderRadius: '8px',
-                fontSize: '14px'
-              }}
-            />
-            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
-              {newBrief.metaTitle?.length || 0}/60 characters
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
-              Meta Description
-            </label>
-            <textarea
-              value={newBrief.metaDescription}
-              onChange={(e) => setNewBrief(prev => ({ ...prev, metaDescription: e.target.value }))}
-              placeholder="Compelling description for search results (160 chars max)"
-              maxLength={160}
-              rows={3}
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #D1D5DB',
-                borderRadius: '8px',
-                fontSize: '14px',
-                resize: 'vertical'
-              }}
-            />
-            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
-              {newBrief.metaDescription?.length || 0}/160 characters
-            </div>
           </div>
         </div>
-      </div>
-
-      <div style={{ marginTop: '24px' }}>
-        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
-          Additional Notes
-        </label>
-        <textarea
-          value={newBrief.notes}
-          onChange={(e) => setNewBrief(prev => ({ ...prev, notes: e.target.value }))}
-          placeholder="Any additional requirements, style guidelines, or notes..."
-          rows={4}
-          style={{
-            width: '100%',
-            padding: '12px',
-            border: '1px solid #D1D5DB',
-            borderRadius: '8px',
-            fontSize: '14px',
-            resize: 'vertical'
-          }}
-        />
-      </div>
-
-      <div style={{ marginTop: '32px', display: 'flex', gap: '12px' }}>
-        <button
-          onClick={saveBrief}
-          disabled={!newBrief.title || !newBrief.targetKeyword}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: newBrief.title && newBrief.targetKeyword ? '#10B981' : '#9CA3AF',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: newBrief.title && newBrief.targetKeyword ? 'pointer' : 'not-allowed'
-          }}
-        >
-          Create Brief
-        </button>
-        <button
-          onClick={() => setNewBrief({
-            title: '',
-            targetKeyword: '',
-            secondaryKeywords: [],
-            url: '',
-            contentType: 'blog',
-            wordCount: 1500,
-            tone: 'professional',
-            targetAudience: '',
-            outline: [],
-            metaTitle: '',
-            metaDescription: '',
-            assignedTo: '',
-            dueDate: '',
-            notes: ''
-          })}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: '#6B7280',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: 'pointer'
-          }}
-        >
-          Clear Form
-        </button>
       </div>
     </div>
   );
@@ -777,144 +537,74 @@ export default function BriefGenerationInterface() {
         <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1F2937' }}>
           Manage Briefs
         </h2>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <select style={{
-            padding: '8px 12px',
-            border: '1px solid #D1D5DB',
-            borderRadius: '6px',
-            fontSize: '14px'
-          }}>
-            <option value="">All Status</option>
-            <option value="draft">Draft</option>
-            <option value="review">Review</option>
-            <option value="approved">Approved</option>
-            <option value="in-progress">In Progress</option>
-            <option value="completed">Completed</option>
-          </select>
-          <select style={{
-            padding: '8px 12px',
-            border: '1px solid #D1D5DB',
-            borderRadius: '6px',
-            fontSize: '14px'
-          }}>
-            <option value="">All Assignees</option>
-            <option value="sarah@agency.com">Sarah</option>
-            <option value="mike@agency.com">Mike</option>
-            <option value="jenny@agency.com">Jenny</option>
-          </select>
-        </div>
       </div>
 
       <div style={{ display: 'grid', gap: '16px' }}>
-        {briefs.map(brief => (
-          <div key={brief.id} style={{
-            backgroundColor: 'white',
-            border: '1px solid #E5E7EB',
-            borderRadius: '12px',
-            padding: '20px'
+        {briefs.length === 0 ? (
+          <div style={{ 
+            backgroundColor: 'white', 
+            border: '1px solid #E5E7EB', 
+            borderRadius: '12px', 
+            padding: '40px', 
+            textAlign: 'center' 
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
-              <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: '#1F2937' }}>
-                  {brief.title}
-                </h3>
-                <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '14px', color: '#6B7280' }}>
-                    <strong>Keyword:</strong> {brief.targetKeyword}
-                  </span>
-                  <span style={{ fontSize: '14px', color: '#6B7280' }}>
-                    <strong>Type:</strong> {brief.contentType}
-                  </span>
-                  <span style={{ fontSize: '14px', color: '#6B7280' }}>
-                    <strong>Words:</strong> {brief.wordCount}
-                  </span>
+            <p style={{ fontSize: '16px', color: '#6B7280' }}>No briefs created yet. Create your first brief!</p>
+          </div>
+        ) : (
+          briefs.map(brief => (
+            <div key={brief.id} style={{
+              backgroundColor: 'white',
+              border: '1px solid #E5E7EB',
+              borderRadius: '12px',
+              padding: '20px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: '#1F2937' }}>
+                    {brief.title}
+                  </h3>
+                  <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
+                    <span style={{ fontSize: '14px', color: '#6B7280' }}>
+                      <strong>Keyword:</strong> {brief.targetKeyword}
+                    </span>
+                    <span style={{ fontSize: '14px', color: '#6B7280' }}>
+                      <strong>Type:</strong> {brief.contentType}
+                    </span>
+                    <span style={{ fontSize: '14px', color: '#6B7280' }}>
+                      <strong>Words:</strong> {brief.wordCount}
+                    </span>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '14px', color: '#6B7280' }}>
-                    <strong>Assigned:</strong> {brief.assignedTo || 'Unassigned'}
-                  </span>
-                  <span style={{ fontSize: '14px', color: '#6B7280' }}>
-                    <strong>Due:</strong> {brief.dueDate || 'No due date'}
-                  </span>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <span style={{
-                  padding: '4px 12px',
-                  backgroundColor: getStatusColor(brief.status),
-                  color: 'white',
-                  borderRadius: '16px',
-                  fontSize: '12px',
-                  fontWeight: '500'
-                }}>
-                  {brief.status}
-                </span>
-                <select
-                  value={brief.status}
-                  onChange={(e) => updateBriefStatus(brief.id, e.target.value as Brief['status'])}
-                  style={{
-                    padding: '6px 8px',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '6px',
-                    fontSize: '12px'
-                  }}
-                >
-                  <option value="draft">Draft</option>
-                  <option value="review">Review</option>
-                  <option value="approved">Approved</option>
-                  <option value="in-progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                </select>
-                <button
-                  onClick={() => deleteBrief(brief.id)}
-                  style={{
-                    padding: '6px 8px',
-                    backgroundColor: '#EF4444',
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <span style={{
+                    padding: '4px 12px',
+                    backgroundColor: getStatusColor(brief.status),
                     color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
+                    borderRadius: '16px',
                     fontSize: '12px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Delete
-                </button>
+                    fontWeight: '500'
+                  }}>
+                    {brief.status}
+                  </span>
+                  <button
+                    onClick={() => deleteBrief(brief.id)}
+                    style={{
+                      padding: '6px 8px',
+                      backgroundColor: '#EF4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
-
-            {brief.metaTitle && (
-              <div style={{ marginBottom: '12px' }}>
-                <strong style={{ fontSize: '14px', color: '#374151' }}>Meta Title:</strong>
-                <p style={{ fontSize: '14px', color: '#6B7280', margin: '4px 0' }}>{brief.metaTitle}</p>
-              </div>
-            )}
-
-            {brief.outline.length > 0 && (
-              <div style={{ marginBottom: '12px' }}>
-                <strong style={{ fontSize: '14px', color: '#374151' }}>Outline:</strong>
-                <ol style={{ margin: '8px 0', paddingLeft: '20px' }}>
-                  {brief.outline.slice(0, 3).map((item, index) => (
-                    <li key={index} style={{ fontSize: '14px', color: '#6B7280', marginBottom: '4px' }}>
-                      {item}
-                    </li>
-                  ))}
-                  {brief.outline.length > 3 && (
-                    <li style={{ fontSize: '14px', color: '#9CA3AF' }}>
-                      ... and {brief.outline.length - 3} more sections
-                    </li>
-                  )}
-                </ol>
-              </div>
-            )}
-
-            {brief.notes && (
-              <div>
-                <strong style={{ fontSize: '14px', color: '#374151' }}>Notes:</strong>
-                <p style={{ fontSize: '14px', color: '#6B7280', margin: '4px 0' }}>{brief.notes}</p>
-              </div>
-            )}
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
@@ -926,7 +616,6 @@ export default function BriefGenerationInterface() {
       </h2>
       
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-        {/* Blog Post Template */}
         <div style={{
           backgroundColor: 'white',
           border: '1px solid #E5E7EB',
@@ -939,85 +628,6 @@ export default function BriefGenerationInterface() {
           <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '16px' }}>
             Standard blog post structure with SEO optimization
           </p>
-          <ul style={{ fontSize: '14px', color: '#6B7280', marginBottom: '16px', paddingLeft: '20px' }}>
-            <li>Introduction with hook</li>
-            <li>Problem identification</li>
-            <li>Solution overview</li>
-            <li>Step-by-step guide</li>
-            <li>Best practices</li>
-            <li>Conclusion with CTA</li>
-          </ul>
-          <button style={{
-            width: '100%',
-            padding: '10px',
-            backgroundColor: '#3B82F6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '14px',
-            cursor: 'pointer'
-          }}>
-            Use Template
-          </button>
-        </div>
-
-        {/* Product Page Template */}
-        <div style={{
-          backgroundColor: 'white',
-          border: '1px solid #E5E7EB',
-          borderRadius: '12px',
-          padding: '20px'
-        }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px', color: '#1F2937' }}>
-            Product Page Template
-          </h3>
-          <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '16px' }}>
-            Conversion-focused product page structure
-          </p>
-          <ul style={{ fontSize: '14px', color: '#6B7280', marginBottom: '16px', paddingLeft: '20px' }}>
-            <li>Product overview</li>
-            <li>Key features & benefits</li>
-            <li>Technical specifications</li>
-            <li>Use cases & examples</li>
-            <li>Pricing & packages</li>
-            <li>FAQ & support</li>
-          </ul>
-          <button style={{
-            width: '100%',
-            padding: '10px',
-            backgroundColor: '#3B82F6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '14px',
-            cursor: 'pointer'
-          }}>
-            Use Template
-          </button>
-        </div>
-
-        {/* Guide Template */}
-        <div style={{
-          backgroundColor: 'white',
-          border: '1px solid #E5E7EB',
-          borderRadius: '12px',
-          padding: '20px'
-        }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px', color: '#1F2937' }}>
-            Comprehensive Guide Template
-          </h3>
-          <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '16px' }}>
-            In-depth guide for complex topics
-          </p>
-          <ul style={{ fontSize: '14px', color: '#6B7280', marginBottom: '16px', paddingLeft: '20px' }}>
-            <li>Executive summary</li>
-            <li>Background & context</li>
-            <li>Methodology</li>
-            <li>Detailed implementation</li>
-            <li>Case studies</li>
-            <li>Tools & resources</li>
-            <li>Next steps</li>
-          </ul>
           <button style={{
             width: '100%',
             padding: '10px',
@@ -1055,23 +665,27 @@ export default function BriefGenerationInterface() {
           {[
             { id: 'create', label: 'Create Brief', icon: '✏️' },
             { id: 'manage', label: 'Manage Briefs', icon: '📋' },
-            { id: 'templates', label: 'Templates', icon: '📝' }
+            { id: 'templates', label: 'Templates', icon: '📄' }
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              onClick={() => setActiveTab(tab.id as 'create' | 'manage' | 'templates')}
               style={{
                 padding: '16px 24px',
-                backgroundColor: activeTab === tab.id ? '#EBF4FF' : 'transparent',
-                color: activeTab === tab.id ? '#3B82F6' : '#6B7280',
                 border: 'none',
-                borderBottom: activeTab === tab.id ? '2px solid #3B82F6' : '2px solid transparent',
-                cursor: 'pointer',
+                backgroundColor: 'transparent',
+                borderBottom: activeTab === tab.id ? '3px solid #3B82F6' : '3px solid transparent',
+                color: activeTab === tab.id ? '#3B82F6' : '#6B7280',
                 fontSize: '14px',
-                fontWeight: '500'
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}
             >
-              {tab.icon} {tab.label}
+              <span>{tab.icon}</span>
+              {tab.label}
             </button>
           ))}
         </div>
@@ -1086,3 +700,4 @@ export default function BriefGenerationInterface() {
     </div>
   );
 }
+
