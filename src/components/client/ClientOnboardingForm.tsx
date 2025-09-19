@@ -18,12 +18,20 @@ interface KeywordData {
   source: 'csv' | 'gsc' | 'manual';
 }
 
+interface PrimaryKeywordData {
+  keyword: string;
+  priority: number;
+  targetLocation?: string;
+  notes?: string;
+}
+
 interface ClientFormData {
   name: string;
   industry: string;
   locations: LocationData[];
   services: string[];
   competitors: string[];
+  primaryKeywords: PrimaryKeywordData[];
   seedKeywords: KeywordData[];
   integrations: {
     googleSearchConsole: boolean;
@@ -52,6 +60,12 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
     }],
     services: [''],
     competitors: [''],
+    primaryKeywords: [{
+      keyword: '',
+      priority: 5,
+      targetLocation: '',
+      notes: ''
+    }],
     seedKeywords: [],
     integrations: {
       googleSearchConsole: false,
@@ -60,7 +74,7 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
     }
   });
 
-  const totalSteps = 6;
+  const totalSteps = 7;
 
   const updateFormData = (field: keyof ClientFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -115,6 +129,34 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
     }));
   };
 
+  const addPrimaryKeyword = () => {
+    setFormData(prev => ({
+      ...prev,
+      primaryKeywords: [...prev.primaryKeywords, {
+        keyword: '',
+        priority: 5,
+        targetLocation: '',
+        notes: ''
+      }]
+    }));
+  };
+
+  const updatePrimaryKeyword = (index: number, field: keyof PrimaryKeywordData, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      primaryKeywords: prev.primaryKeywords.map((item, i) => 
+        i === index ? { ...item, [field]: value } : item
+      )
+    }));
+  };
+
+  const removePrimaryKeyword = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      primaryKeywords: prev.primaryKeywords.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleKeywordsImported = (keywords: KeywordData[]) => {
     setFormData(prev => ({
       ...prev,
@@ -142,6 +184,7 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
       locations: formData.locations.filter(item => item.city.trim()),
       services: formData.services.filter(item => item.trim()),
       competitors: formData.competitors.filter(item => item.trim()),
+      primaryKeywords: formData.primaryKeywords.filter(item => item.keyword.trim()),
       seedKeywords: formData.seedKeywords, // Keep all imported keywords
     };
     onComplete(cleanedData);
@@ -491,6 +534,164 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
         return (
           <div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
+              Primary Keywords
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
+              Define your most important target keywords with priority levels. These will be your main focus for SEO optimization.
+            </p>
+            
+            {formData.primaryKeywords.map((primaryKeyword, index) => (
+              <div key={index} style={{ 
+                border: '1px solid #d1d5db', 
+                borderRadius: '0.5rem', 
+                padding: '1rem', 
+                marginBottom: '1rem',
+                backgroundColor: '#f9fafb'
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                      Primary Keyword *
+                    </label>
+                    <input
+                      type="text"
+                      value={primaryKeyword.keyword}
+                      onChange={(e) => updatePrimaryKeyword(index, 'keyword', e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.5rem', 
+                        border: '1px solid #d1d5db', 
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem'
+                      }}
+                      placeholder="Enter primary keyword"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                      Priority (1-10)
+                    </label>
+                    <input
+                      type="number"
+                      value={primaryKeyword.priority}
+                      onChange={(e) => updatePrimaryKeyword(index, 'priority', parseInt(e.target.value) || 5)}
+                      min="1"
+                      max="10"
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.5rem', 
+                        border: '1px solid #d1d5db', 
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem'
+                      }}
+                      placeholder="5"
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                      Target Location (Optional)
+                    </label>
+                    <select
+                      value={primaryKeyword.targetLocation}
+                      onChange={(e) => updatePrimaryKeyword(index, 'targetLocation', e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.5rem', 
+                        border: '1px solid #d1d5db', 
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      <option value="">All locations</option>
+                      {formData.locations.map((location, locIndex) => (
+                        <option key={locIndex} value={location.city}>
+                          {location.city}{location.state ? `, ${location.state}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'end', gap: '0.5rem' }}>
+                    {formData.primaryKeywords.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removePrimaryKeyword(index)}
+                        style={{ 
+                          padding: '0.5rem', 
+                          backgroundColor: '#ef4444', 
+                          color: 'white', 
+                          border: 'none', 
+                          borderRadius: '0.375rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div style={{ marginTop: '0.75rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                    Notes (Optional)
+                  </label>
+                  <textarea
+                    value={primaryKeyword.notes}
+                    onChange={(e) => updatePrimaryKeyword(index, 'notes', e.target.value)}
+                    rows={2}
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.5rem', 
+                      border: '1px solid #d1d5db', 
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                      resize: 'vertical'
+                    }}
+                    placeholder="Any specific notes about this keyword..."
+                  />
+                </div>
+              </div>
+            ))}
+            
+            <button
+              type="button"
+              onClick={addPrimaryKeyword}
+              style={{ 
+                padding: '0.5rem 1rem', 
+                backgroundColor: '#10b981', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '0.375rem',
+                cursor: 'pointer',
+                fontSize: '0.875rem'
+              }}
+            >
+              Add Primary Keyword
+            </button>
+            
+            {formData.primaryKeywords.length === 0 && (
+              <div style={{
+                backgroundColor: '#fef3c7',
+                border: '1px solid #f59e0b',
+                borderRadius: '0.375rem',
+                padding: '1rem',
+                marginTop: '1rem'
+              }}>
+                <p style={{ fontSize: '0.875rem', color: '#92400e', margin: 0 }}>
+                  💡 <strong>Tip:</strong> Add 3-5 primary keywords that best represent your main business offerings. 
+                  These should be the keywords you most want to rank for.
+                </p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 6:
+        return (
+          <div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
               Seed Keywords
             </h3>
             <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
@@ -564,7 +765,7 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
           </div>
         );
 
-      case 6:
+      case 7:
         return (
           <div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
@@ -627,8 +828,10 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
       case 4:
         return true; // Competitors are optional
       case 5:
-        return true; // Seed keywords are optional but recommended
+        return true; // Primary keywords are optional but recommended
       case 6:
+        return true; // Seed keywords are optional but recommended
+      case 7:
         return true; // Integrations are optional
       default:
         return false;
