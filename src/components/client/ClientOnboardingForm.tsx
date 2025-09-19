@@ -28,6 +28,7 @@ interface PrimaryKeywordData {
 interface ClientFormData {
   name: string;
   industry: string;
+  website: string;
   locations: LocationData[];
   services: string[];
   competitors: string[];
@@ -50,6 +51,7 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
   const [formData, setFormData] = useState<ClientFormData>({
     name: '',
     industry: '',
+    website: '',
     locations: [{
       city: '',
       state: '',
@@ -242,6 +244,24 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
                 <option value="Education">Education</option>
                 <option value="Other">Other</option>
               </select>
+            </div>
+            <div style={{ marginTop: '1rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                Website URL *
+              </label>
+              <input
+                type="url"
+                value={formData.website}
+                onChange={(e) => updateFormData('website', e.target.value)}
+                required
+                style={{ 
+                  width: '100%', 
+                  padding: '0.5rem', 
+                  border: '1px solid #d1d5db', 
+                  borderRadius: '0.375rem' 
+                }}
+                placeholder="https://www.example.com"
+              />
             </div>
           </div>
         );
@@ -820,7 +840,7 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
   const isStepValid = () => {
     switch (currentStep) {
       case 1:
-        return formData.name.trim() && formData.industry;
+        return formData.name.trim() && formData.industry && formData.website.trim();
       case 2:
         return formData.locations.some(loc => loc.city.trim());
       case 3:
