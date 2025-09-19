@@ -1,6 +1,7 @@
 import { useAuth } from '../src/components/auth/AuthContext';
 import AuthWrapper from '../src/components/auth/AuthWrapper';
 import MainLayout from '../src/components/layout/MainLayout';
+import ConnectionTest from '../components/ConnectionTest';
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -15,6 +16,7 @@ export default function Home() {
 
   return (
     <MainLayout>
+      <ConnectionTest />
       <div style={{ padding: '2rem' }}>
         <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>
           Welcome to RankScope
