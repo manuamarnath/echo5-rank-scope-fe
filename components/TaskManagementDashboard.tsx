@@ -75,6 +75,8 @@ export default function TaskManagementDashboard() {
     tags: []
   });
 
+  const [isMobile, setIsMobile] = useState(false);
+
   useEffect(() => {
     loadTasks();
   }, []);
@@ -83,95 +85,28 @@ export default function TaskManagementDashboard() {
     applyFilters();
   }, [tasks, filters]);
 
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const loadTasks = async () => {
-    // Mock data - replace with API call
-    const mockTasks: Task[] = [
-      {
-        id: '1',
-        title: 'Write SEO Blog Post - Ultimate Guide to Local SEO',
-        description: 'Create comprehensive blog post covering local SEO strategies, including Google My Business optimization, local citations, and review management.',
-        type: 'content-creation',
-        status: 'in-progress',
-        priority: 'high',
-        assignedTo: 'sarah@agency.com',
-        assignedBy: 'manager@agency.com',
-        clientId: 'client-1',
-        clientName: 'Local Restaurant Chain',
-        briefId: 'brief-1',
-        dueDate: '2024-01-15',
-        createdAt: '2024-01-01',
-        updatedAt: '2024-01-08',
-        estimatedHours: 8,
-        actualHours: 5,
-        tags: ['SEO', 'Content', 'Local Business'],
-        comments: [
-          {
-            id: '1',
-            userId: 'sarah@agency.com',
-            userName: 'Sarah',
-            message: 'Started working on the outline. Need clarification on target word count.',
-            timestamp: '2024-01-08T10:30:00Z'
-          }
-        ],
-        dependencies: [],
-        attachments: [
-          { name: 'Content Brief.pdf', url: '/briefs/local-seo-brief.pdf', type: 'pdf' }
-        ]
-      },
-      {
-        id: '2',
-        title: 'Technical SEO Audit - Website Performance',
-        description: 'Conduct comprehensive technical SEO audit focusing on Core Web Vitals, site speed, and mobile optimization.',
-        type: 'technical-seo',
-        status: 'todo',
-        priority: 'urgent',
-        assignedTo: 'mike@agency.com',
-        assignedBy: 'manager@agency.com',
-        clientId: 'client-2',
-        clientName: 'E-commerce Store',
-        dueDate: '2024-01-12',
-        createdAt: '2024-01-05',
-        updatedAt: '2024-01-05',
-        estimatedHours: 12,
-        actualHours: 0,
-        tags: ['Technical SEO', 'Audit', 'Performance'],
-        comments: [],
-        dependencies: [],
-        attachments: []
-      },
-      {
-        id: '3',
-        title: 'Keyword Research - Q1 Content Strategy',
-        description: 'Research and analyze keywords for Q1 content calendar. Focus on seasonal trends and competitor gaps.',
-        type: 'keyword-research',
-        status: 'review',
-        priority: 'medium',
-        assignedTo: 'jenny@agency.com',
-        assignedBy: 'manager@agency.com',
-        clientId: 'client-3',
-        clientName: 'SaaS Startup',
-        dueDate: '2024-01-10',
-        createdAt: '2024-01-02',
-        updatedAt: '2024-01-09',
-        estimatedHours: 6,
-        actualHours: 7,
-        tags: ['Keywords', 'Strategy', 'Research'],
-        comments: [
-          {
-            id: '2',
-            userId: 'jenny@agency.com',
-            userName: 'Jenny',
-            message: 'Completed initial research. Found 150 target keywords. Ready for review.',
-            timestamp: '2024-01-09T14:20:00Z'
-          }
-        ],
-        dependencies: [],
-        attachments: [
-          { name: 'Keyword Analysis.xlsx', url: '/research/q1-keywords.xlsx', type: 'excel' }
-        ]
+    try {
+      const response = await fetch('/api/tasks');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch tasks: ${response.statusText}`);
       }
-    ];
-    setTasks(mockTasks);
+      const data: Task[] = await response.json();
+      setTasks(data);
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+      setTasks([]); // Set empty array on error
+      // Optionally show a toast or error message to user
+    }
   };
 
   const applyFilters = () => {

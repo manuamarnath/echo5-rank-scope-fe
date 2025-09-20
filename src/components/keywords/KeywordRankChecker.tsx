@@ -136,7 +136,8 @@ export default function KeywordRankChecker() {
       const response = await fetch(`/api/keywords?clientId=${clientId}`);
       if (response.ok) {
         const data = await response.json();
-        setKeywords(data);
+        // Handle paginated response structure
+        setKeywords(data.data || data);
       }
     } catch (error) {
       console.error('Error fetching keywords:', error);

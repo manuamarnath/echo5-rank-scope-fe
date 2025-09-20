@@ -2,12 +2,29 @@ import { useAuth } from '../src/components/auth/AuthContext';
 import AuthWrapper from '../src/components/auth/AuthWrapper';
 import MainLayout from '../src/components/layout/MainLayout';
 import ConnectionTest from '../components/ConnectionTest';
+import {
+  Box,
+  Typography,
+  Button,
+  Container,
+  CircularProgress,
+  Stack,
+  useTheme,
+  useMediaQuery
+} from '@mui/material';
 
 export default function Home() {
   const { user, loading } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   if (loading) {
-    return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>;
+    return (
+      <Container maxWidth="sm" sx={{ py: 4, textAlign: 'center' }}>
+        <CircularProgress />
+        <Typography variant="body1" sx={{ mt: 2 }}>Loading...</Typography>
+      </Container>
+    );
   }
 
   if (!user) {
@@ -17,58 +34,55 @@ export default function Home() {
   return (
     <MainLayout>
       <ConnectionTest />
-      <div style={{ padding: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-          Welcome to RankScope
-        </h1>
-        <p style={{ marginBottom: '1rem' }}>
-          Hello {user.email}! You are logged in as a {user.role}.
-        </p>
-        <div style={{ display: 'grid', gap: '1rem', maxWidth: '400px' }}>
-          <a 
-            href="/dashboard" 
-            style={{ 
-              padding: '0.75rem 1.5rem', 
-              backgroundColor: '#4f46e5', 
-              color: 'white', 
-              textDecoration: 'none', 
-              borderRadius: '0.375rem',
-              textAlign: 'center',
-              fontWeight: '500'
-            }}
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 } }}>
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <Typography
+            variant={isMobile ? 'h4' : 'h2'}
+            component="h1"
+            gutterBottom
+            sx={{ fontWeight: 'bold', mb: 2 }}
+          >
+            Welcome to RankScope
+          </Typography>
+          <Typography variant="h6" color="textSecondary" paragraph>
+            Hello {user.email}! You are logged in as a {user.role}.
+          </Typography>
+        </Box>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={2}
+          justifyContent="center"
+          sx={{ maxWidth: 400, mx: 'auto' }}
+        >
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            href="/dashboard"
+            sx={{ py: 1.5 }}
           >
             Go to Dashboard
-          </a>
-          <a 
-            href="/clients" 
-            style={{ 
-              padding: '0.75rem 1.5rem', 
-              backgroundColor: '#10b981', 
-              color: 'white', 
-              textDecoration: 'none', 
-              borderRadius: '0.375rem',
-              textAlign: 'center',
-              fontWeight: '500'
-            }}
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            fullWidth
+            href="/clients"
+            sx={{ py: 1.5 }}
           >
             Manage Clients
-          </a>
-          <a 
-            href="/pages" 
-            style={{ 
-              padding: '0.75rem 1.5rem', 
-              backgroundColor: '#f59e0b', 
-              color: 'white', 
-              textDecoration: 'none', 
-              borderRadius: '0.375rem',
-              textAlign: 'center',
-              fontWeight: '500'
-            }}
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            fullWidth
+            href="/pages"
+            sx={{ py: 1.5 }}
           >
             Pages Management
-          </a>
-        </div>
-      </div>
+          </Button>
+        </Stack>
+      </Container>
     </MainLayout>
   );
 }

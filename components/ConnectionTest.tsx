@@ -27,10 +27,9 @@ export default function ConnectionTest() {
       if (healthResponse.ok) {
         testResult.backend = true;
         
-        // Test database connection by trying to fetch clients
-        const clientsResponse = await fetch('/api/clients');
-        if (clientsResponse.ok || clientsResponse.status === 401) {
-          // 401 is expected if no auth, but means backend + DB are working
+        // Test database connection by trying to fetch demo clients (public endpoint)
+        const clientsResponse = await fetch('/api/clients/demo');
+        if (clientsResponse.ok) {
           testResult.database = true;
         }
       }

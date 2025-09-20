@@ -1,47 +1,58 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 
-interface Keyword {
-  id?: string;
-  _id?: string;
-  text: string;
-  intent?: string;
-  searchVolume?: number;
-  volume?: number;
-  difficulty?: number;
-  geo?: string;
-  allocatedTo?: string;
-  role?: 'owner' | 'employee' | 'client';
-  status?: 'pending' | 'allocated' | 'in-progress' | 'completed';
-  isPrimary?: boolean;
-}
+import * as KeywordService from '../../../services/keywordService';
 
-interface Client {
-  _id: string;
-  name: string;
-  industry: string;
-  website?: string;
-  locations?: Array<{
-    city: string;
-    state: string;
-    country: string;
-    radius?: number;
-    radiusUnit?: string;
-  }>;
-  services?: string[];
-  competitors?: string[];
-}
+// These interfaces are already defined in this file, so we can remove this import
 
-interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: 'owner' | 'employee' | 'client';
-}
 
-interface KeywordAllocationProps {
-  onClose?: () => void;
-  clientId?: string;
-}
+
+ interface Keyword {
+   id?: string;
+   _id?: string;
+   text: string;
+   intent?: string;
+   searchVolume?: number;
+   volume?: number;
+   difficulty?: number;
+   geo?: string;
+   allocatedTo?: string;
+   role?: 'owner' | 'employee' | 'client';
+   status?: 'pending' | 'allocated' | 'in-progress' | 'completed';
+   isPrimary?: boolean;
+ }
+
+ interface Client {
+   _id: string;
+   name: string;
+   industry: string;
+   website?: string;
+   locations?: Array<{
+     city: string;
+     state: string;
+     country: string;
+     radius?: number;
+     radiusUnit?: string;
+   }>;
+   services?: string[];
+   competitors?: string[];
+ }
+
+ interface TeamMember {
+   id: string;
+   name: string;
+   email: string;
+   role: 'owner' | 'employee' | 'client';
+ }
+ 
+ interface KeywordAllocationProps {
+   onClose?: () => void;
+   clientId?: string;
+ }
+
+import { Box, Tabs, Tab, Paper, Grid, Typography, Button, TextField, Select, MenuItem, FormControl, InputLabel, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Checkbox, Badge, Stack } from '@mui/material';
+import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { styled } from '@mui/material/styles';
 
 export default function KeywordAllocationInterface({ onClose, clientId }: KeywordAllocationProps) {
   const [keywords, setKeywords] = useState<Keyword[]>([]);
@@ -105,7 +116,8 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
       const response = await fetch(`/api/keywords?clientId=${clientId}`);
       if (response.ok) {
         const data = await response.json();
-        setClientKeywords(data);
+        // Handle paginated response structure
+        setClientKeywords(data.data || []);
       } else {
         setClientKeywords([]);
       }
@@ -133,6 +145,9 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
 
       if (response.ok) {
         setNewKeyword({ text: '', intent: 'informational', geo: '', volume: '', difficulty: '' });
+        fetchClientKeywords(selectedClientId);
+        setIsEditModalOpen(false);
+        fetchClientKeywords(selectedClientId);
         fetchClientKeywords(selectedClientId);
       } else {
         const error = await response.json();
@@ -591,11 +606,11 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
     <div>
       <div style={{ marginBottom: '1rem' }}>
         <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.5rem' }}>Onboarding Keywords for Selected Client</h4>
-        {clientKeywords.length === 0 ? (
+        {(clientKeywords || []).length === 0 ? (
           <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>No onboarding keywords found for this client.</div>
         ) : (
           <div style={{ maxHeight: '180px', overflowY: 'auto', border: '2px solid #6366f1', borderRadius: '0.5rem', marginBottom: '1rem', background: '#f5f3ff' }}>
-            {clientKeywords.map((kw) => (
+            {(clientKeywords || []).map((kw) => (
               <div key={kw.id || kw._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', borderBottom: '1px solid #e0e7ff', backgroundColor: selectedKeywords.includes(kw.id || kw._id) ? '#e0e7ff' : 'transparent', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', alignItems: 'center', flex: 1 }} onClick={() => toggleKeywordSelection(kw.id || kw._id)}>
                   <input type="checkbox" checked={selectedKeywords.includes(kw.id || kw._id)} readOnly style={{ marginRight: '0.75rem' }} />
