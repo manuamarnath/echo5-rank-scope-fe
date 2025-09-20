@@ -91,8 +91,10 @@ export default function BriefGenerationInterface() {
     try {
       const response = await fetch(`/api/keywords?clientId=${clientId}`);
       if (response.ok) {
-        const data = await response.json();
-        setKeywords(data.map((k: any) => ({
+        const responseData = await response.json();
+        // Handle both paginated response (with data property) and direct array
+        const keywordsData = responseData.data || responseData;
+        setKeywords(keywordsData.map((k: any) => ({
           id: k._id || k.id,
           keyword: k.text || k.keyword,
           searchVolume: k.volume || k.searchVolume || 0,
