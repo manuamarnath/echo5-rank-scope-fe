@@ -26,7 +26,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: process.env.NODE_ENV === 'production' ? `https://echo5-rank-scope-be.onrender.com/api/:path*` : `http://localhost:5001/api/:path*`, // Proxy to Backend with /api prefix
+        destination: `https://echo5-rank-scope-be.onrender.com/api/:path*`, // Proxy to deployed Backend
       },
       {
         source: '/health',
@@ -43,7 +43,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Access-Control-Allow-Origin',
-            value: process.env.NEXT_PUBLIC_ENVIRONMENT === 'production' ? 'https://echo5-rank-scope-fe-e5i4.vercel.app' : 'http://localhost:3000',
+            value: 'https://echo5-rank-scope-fe-e5i4.vercel.app',
           },
           {
             key: 'Access-Control-Allow-Methods',
