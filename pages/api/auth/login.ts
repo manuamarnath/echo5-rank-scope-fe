@@ -1,9 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { IncomingMessage } from 'http';
+import type { IncomingHttpHeaders } from 'http';
 
 interface ExtendedNextApiRequest extends NextApiRequest {
-  method?: string;
-  headers: IncomingMessage['headers'];
+  headers: IncomingHttpHeaders;
 }
 
 export default async function handler(req: ExtendedNextApiRequest, res: NextApiResponse) {
@@ -12,8 +11,8 @@ export default async function handler(req: ExtendedNextApiRequest, res: NextApiR
   }
 
   try {
-    // Temporarily hardcode backend URL for testing
-    const backendUrl = 'https://echo5-rank-scope-be.onrender.com';
+  // Use environment variable when available, fallback to deployed backend
+  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echo5-rank-scope-be.onrender.com';
     
     // Forward the request to the backend
     const response = await fetch(`${backendUrl}/api/auth/login`, {
