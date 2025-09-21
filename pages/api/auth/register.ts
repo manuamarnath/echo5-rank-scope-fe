@@ -1,9 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { IncomingMessage } from 'http';
+import type { IncomingHttpHeaders } from 'http';
 
 interface ExtendedNextApiRequest extends NextApiRequest {
-  method?: string;
-  headers: IncomingMessage['headers'];
+  headers: IncomingHttpHeaders;
 }
 
 export default async function handler(req: ExtendedNextApiRequest, res: NextApiResponse) {
