@@ -70,7 +70,8 @@ class AIContentService {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
-          prompt: prompt,
+          prompt: `Please produce plagiarism-free, original content. ${prompt}`,
+          originality_proof: true,
           model: 'meta-llama/llama-3.3-70b-instruct:free',
           max_tokens: 1500,
           temperature: 0.7,
@@ -101,7 +102,8 @@ class AIContentService {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
-          prompt: prompt,
+          prompt: `Please provide original keyword suggestions and avoid copying lists from any single source. ${prompt}`,
+          originality_proof: true,
           model: 'meta-llama/llama-3.3-70b-instruct:free',
           max_tokens: 1000,
           temperature: 0.7,
@@ -150,7 +152,8 @@ class AIContentService {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
-          prompt: prompt,
+          prompt: `Please produce plagiarism-free, original meta title and description. ${prompt}`,
+          originality_proof: true,
           model: 'meta-llama/llama-3.3-70b-instruct:free',
           max_tokens: 300,
           temperature: 0.7,
