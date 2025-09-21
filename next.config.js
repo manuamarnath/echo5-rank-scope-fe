@@ -43,9 +43,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Access-Control-Allow-Origin',
-            value: process.env.NEXT_PUBLIC_ENVIRONMENT === 'production' 
-              ? 'https://echo5-rank-scope-fe-e5i4.vercel.app' 
-              : 'http://localhost:3000',
+            value: process.env.NEXT_PUBLIC_ENVIRONMENT === 'production' ? 'https://echo5-rank-scope-fe-e5i4.vercel.app' : 'http://localhost:3000',
           },
           {
             key: 'Access-Control-Allow-Methods',
