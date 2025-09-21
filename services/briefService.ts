@@ -2,7 +2,8 @@ const API_BASE = '/api';
 
 // Get auth token from localStorage
 const getAuthToken = () => {
-  return localStorage.getItem('token');
+  // Support both keys used in the app: 'token' and 'auth_token'
+  return localStorage.getItem('token') || localStorage.getItem('auth_token');
 };
 
 declare const process: {
