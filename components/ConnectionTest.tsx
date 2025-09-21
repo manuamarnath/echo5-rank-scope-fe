@@ -129,7 +129,7 @@ export default function ConnectionTest() {
               <br /><br />
               <strong>Available URLs:</strong>
               <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
-                <li>Frontend: <a href={typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'} target="_blank">{typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}</a></li>
+                <li>Frontend: <a href={typeof window !== 'undefined' ? window.location.origin : 'https://echo5-rank-scope-fe-e5i4.vercel.app'} target="_blank">{typeof window !== 'undefined' ? window.location.origin : 'https://echo5-rank-scope-fe-e5i4.vercel.app/'}</a></li>
                 <li>Backend API: <a href="/api/health" target="_blank">/api/health</a></li>
                 <li>API Health: <a href="/api/health" target="_blank">/api/health</a></li>
               </ul>
