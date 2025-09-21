@@ -18,9 +18,7 @@ import {
   Typography,
   CssBaseline,
   useTheme,
-  useMediaQuery,
   Avatar,
-  Divider,
   Chip
 } from '@mui/material';
 import {
@@ -56,7 +54,6 @@ export default function MainLayout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);

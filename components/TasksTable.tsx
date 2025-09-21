@@ -2,6 +2,18 @@ import React from 'react';
 import useSWR from 'swr';
 import axios from 'axios';
 
+interface Task {
+  _id: string;
+  title: string;
+  status: string;
+  assignedTo?: {
+    name: string;
+  };
+  pageId?: {
+    title: string;
+  };
+}
+
 const fetcher = (url: string) => axios.get(url).then(res => res.data);
 
 export default function TasksTable() {
@@ -23,7 +35,7 @@ export default function TasksTable() {
           </tr>
         </thead>
         <tbody>
-          {data?.map((task: any) => (
+          {data?.map((task: Task) => (
             <tr key={task._id}>
               <td>{task.title}</td>
               <td>{task.status}</td>

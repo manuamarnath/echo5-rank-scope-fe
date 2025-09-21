@@ -1,35 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../src/components/auth/AuthContext';
 import AIContentService from '../services/AIContentService';
-
-interface Keyword {
-  id: string;
-  keyword: string;
-  searchVolume: number;
-  difficulty: number;
-  assignedTo?: string;
-  status: 'pending' | 'assigned' | 'in-progress' | 'completed';
-}
-
-interface Brief {
-  id: string;
-  title: string;
-  targetKeyword: string;
-  secondaryKeywords: string[];
-  url: string;
-  contentType: 'blog' | 'landing-page' | 'product-page' | 'guide';
-  wordCount: number;
-  tone: 'professional' | 'casual' | 'technical' | 'conversational';
-  targetAudience: string;
-  outline: string[];
-  metaTitle: string;
-  metaDescription: string;
-  assignedTo: string;
-  dueDate: string;
-  status: 'draft' | 'review' | 'approved' | 'in-progress' | 'completed';
-  createdAt: string;
-  notes: string;
-}
+import briefService, { Brief as BriefType } from '../services/briefService';
+import { Keyword } from '../src/components/keywords/interfaces';
 
 interface Competitor {
   url: string;
@@ -42,14 +15,18 @@ interface Competitor {
 export default function BriefGenerationInterface() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'templates'>('create');
-  const [briefs, setBriefs] = useState<Brief[]>([]);
+  const [briefs, setBriefs] = useState<BriefType[]>([]);
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [clients, setClients] = useState<{_id: string, name: string}[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string>('');
-  const [newBrief, setNewBrief] = useState<Partial<Brief>>({
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templates, setTemplates] = useState<Partial<BriefType>[]>([]);
+  const [newBrief, setNewBrief] = useState<Partial<BriefType>>({
     title: '',
     targetKeyword: '',
     secondaryKeywords: [],
@@ -77,35 +54,38 @@ export default function BriefGenerationInterface() {
 
   const fetchClients = async () => {
     try {
-      const response = await fetch('/api/clients/demo');
-      if (response.ok) {
-        const data = await response.json();
-        setClients(data.map((c: any) => ({ _id: c._id, name: c.name })));
-      }
+      setLoading(true);
+      setError('');
+      const data = await briefService.fetchClients();
+      setClients(data.map((c: {_id: string, name: string}) => ({ _id: c._id, name: c.name })));
     } catch (error) {
+      console.error('Error fetching clients:', error);
+      setError('Failed to fetch clients');
       setClients([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchClientKeywords = async (clientId: string) => {
     try {
-      const response = await fetch(`/api/keywords?clientId=${clientId}`);
-      if (response.ok) {
-        const responseData = await response.json();
-        // Handle both paginated response (with data property) and direct array
-        const keywordsData = responseData.data || responseData;
-        setKeywords(keywordsData.map((k: any) => ({
-          id: k._id || k.id,
-          keyword: k.text || k.keyword,
-          searchVolume: k.volume || k.searchVolume || 0,
-          difficulty: k.difficulty || 0,
-          status: k.status || 'pending',
-        })));
-      } else {
-        setKeywords([]);
-      }
+      setLoading(true);
+      const responseData = await briefService.fetchKeywords(clientId);
+      // Handle both paginated response (with data property) and direct array
+      const keywordsData = responseData.data || responseData;
+      setKeywords(keywordsData.map((k: {_id?: string; id?: string; text?: string; keyword?: string; volume?: number; searchVolume?: number; difficulty?: number; status?: string}) => ({
+        _id: k._id || k.id || '',
+        text: k.text || k.keyword || '',
+        searchVolume: k.volume || k.searchVolume || 0,
+        difficulty: k.difficulty || 0,
+        status: k.status || 'pending',
+      })));
     } catch (error) {
+      console.error('Error fetching client keywords:', error);
+      setError('Failed to fetch keywords for selected client');
       setKeywords([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -179,13 +159,29 @@ export default function BriefGenerationInterface() {
 
   const saveBrief = async () => {
     try {
+      setLoading(true);
+      setError('');
+      
+      if (!selectedClientId) {
+        throw new Error('Please select a client');
+      }
+      
+      if (!newBrief.targetKeyword) {
+        throw new Error('Please select a target keyword');
+      }
+      
       const briefToSave = {
         ...newBrief,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        status: 'draft' as const
+        clientId: selectedClientId,
+        secondaryKeywords: newBrief.secondaryKeywords || [],
+        outline: newBrief.outline || [],
+        assignedTo: newBrief.assignedTo || '',
       };
-      setBriefs(prev => [...prev, briefToSave as Brief]);
+      
+      const savedBrief = await briefService.createBrief(briefToSave);
+      
+      // Add to local state
+      setBriefs(prev => [...prev, savedBrief]);
       
       // Reset form
       setNewBrief({
@@ -204,12 +200,19 @@ export default function BriefGenerationInterface() {
         dueDate: '',
         notes: ''
       });
+      
+      // Switch to manage tab to show the new brief
+      setActiveTab('manage');
+      
     } catch (error) {
       console.error('Error saving brief:', error);
+      setError(error instanceof Error ? error.message : 'Failed to save brief');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const updateBriefStatus = (briefId: string, status: Brief['status']) => {
+  const updateBriefStatus = (briefId: string, status: BriefType['status']) => {
     setBriefs(prev => prev.map(brief => 
       brief.id === briefId ? { ...brief, status } : brief
     ));
@@ -219,7 +222,7 @@ export default function BriefGenerationInterface() {
     setBriefs(prev => prev.filter(brief => brief.id !== briefId));
   };
 
-  const getStatusColor = (status: Brief['status']) => {
+  const getStatusColor = (status: BriefType['status']) => {
     switch (status) {
       case 'draft': return '#6B7280';
       case 'review': return '#F59E0B';
@@ -236,6 +239,46 @@ export default function BriefGenerationInterface() {
       <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '24px', color: '#1F2937' }}>
         Create Content Brief
       </h2>
+      
+      {/* Error Display */}
+      {error && (
+        <div style={{ 
+          padding: '12px', 
+          backgroundColor: '#FEE2E2', 
+          border: '1px solid #EF4444', 
+          borderRadius: '8px',
+          marginBottom: '16px'
+        }}>
+          <p style={{ fontSize: '14px', color: '#B91C1C', margin: 0 }}>
+            {error}
+          </p>
+        </div>
+      )}
+      
+      {/* Loading Overlay */}
+      {loading && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '20px',
+            borderRadius: '8px',
+            textAlign: 'center'
+          }}>
+            <p>Loading...</p>
+          </div>
+        </div>
+      )}
 
       {/* Client and Keyword Selection */}
       <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: '#F3F4F6', borderRadius: '8px' }}>
@@ -287,8 +330,8 @@ export default function BriefGenerationInterface() {
             >
               <option value="">Choose a keyword...</option>
               {keywords.map(keyword => (
-                <option key={keyword.id} value={keyword.keyword}>
-                  {keyword.keyword} (Vol: {keyword.searchVolume}, Diff: {keyword.difficulty})
+                <option key={keyword._id || keyword.id} value={keyword.text}>
+                  {keyword.text} (Vol: {keyword.searchVolume}, Diff: {keyword.difficulty})
                 </option>
               ))}
             </select>
@@ -307,10 +350,30 @@ export default function BriefGenerationInterface() {
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
         {/* Left Column - Brief Form */}
         <div>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+          {/* Use Template Button */}
+          <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label style={{ display: 'flex', alignItems: 'center', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
               Brief Title
             </label>
+            <button
+              onClick={() => setShowTemplateModal(true)}
+              disabled={templates.length === 0}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: templates.length > 0 ? '#6B7280' : '#9CA3AF',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '12px',
+                cursor: templates.length > 0 ? 'pointer' : 'not-allowed',
+                opacity: templates.length > 0 ? 1 : 0.5
+              }}
+            >
+              📄 Use Template
+            </button>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
             <input
               type="text"
               value={newBrief.title}

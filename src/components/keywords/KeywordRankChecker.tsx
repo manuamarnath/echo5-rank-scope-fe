@@ -1,33 +1,6 @@
 import { useState, useEffect } from 'react';
-
-interface Client {
-  _id: string;
-  name: string;
-  industry: string;
-  website?: string;
-  locations: Array<{
-    city: string;
-    state: string;
-    country: string;
-    radius: number;
-    radiusUnit: string;
-  }>;
-  services: string[];
-  competitors: string[];
-}
-
-interface Keyword {
-  _id: string;
-  text: string;
-  isPrimary: boolean;
-  priority?: number;
-  intent: string;
-  volume?: number;
-  difficulty?: number;
-  currentRank?: number;
-  previousRank?: number;
-  targetLocation?: string;
-}
+import Link from 'next/link';
+import { Keyword, Client } from './interfaces';
 
 interface RankResult {
   keyword: string;
@@ -101,7 +74,7 @@ export default function KeywordRankChecker() {
       // If proxy fails, try direct backend connection
       if (!response.ok) {
         console.log('Proxy failed, trying direct backend connection...');
-        response = await fetch('http://localhost:5000/clients/demo');
+        response = await fetch('/api/clients/demo');
       }
       
       if (response.ok) {
@@ -118,7 +91,7 @@ export default function KeywordRankChecker() {
       // Try direct backend as fallback
       try {
         console.log('Trying direct backend connection as fallback...');
-        const response = await fetch('http://localhost:5000/clients/demo');
+        const response = await fetch('/api/clients/demo');
         if (response.ok) {
           const data = await response.json();
           setClients(data);
@@ -274,7 +247,7 @@ export default function KeywordRankChecker() {
                 fontSize: '0.75rem',
                 color: '#92400e'
               }}>
-                ⚠️ No clients available. Please go to the <a href="/clients" style={{ color: '#92400e', textDecoration: 'underline' }}>Clients page</a> to create a client first.
+                ⚠️ No clients available. Please go to the <Link href="/clients" style={{ color: '#92400e', textDecoration: 'underline' }}>Clients page</Link> to create a client first.
               </div>
             )}
           </div>
@@ -447,7 +420,7 @@ export default function KeywordRankChecker() {
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <select
                 value={keywordFilter}
-                onChange={(e) => setKeywordFilter(e.target.value as any)}
+                onChange={(e) => setKeywordFilter(e.target.value as 'all' | 'primary' | 'seed')}
                 style={{
                   padding: '0.25rem 0.75rem',
                   border: '1px solid #d1d5db',

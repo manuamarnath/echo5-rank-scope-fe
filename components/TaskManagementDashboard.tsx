@@ -49,11 +49,12 @@ interface TaskFilters {
 }
 
 export default function TaskManagementDashboard() {
-  const { user } = useAuth();
   const [activeView, setActiveView] = useState<'kanban' | 'list' | 'calendar' | 'gantt'>('kanban');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
-  const [filters, setFilters] = useState<TaskFilters>({
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [filters] = useState<TaskFilters>({
     status: [],
     priority: [],
     assignee: [],
@@ -61,21 +62,6 @@ export default function TaskManagementDashboard() {
     type: [],
     dateRange: { start: '', end: '' }
   });
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [showTaskModal, setShowTaskModal] = useState(false);
-  const [newTask, setNewTask] = useState<Partial<Task>>({
-    title: '',
-    description: '',
-    type: 'content-creation',
-    priority: 'medium',
-    assignedTo: '',
-    clientId: '',
-    dueDate: '',
-    estimatedHours: 0,
-    tags: []
-  });
-
-  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     loadTasks();
@@ -84,15 +70,6 @@ export default function TaskManagementDashboard() {
   useEffect(() => {
     applyFilters();
   }, [tasks, filters]);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   const loadTasks = async () => {
     try {
@@ -109,7 +86,7 @@ export default function TaskManagementDashboard() {
     }
   };
 
-  const applyFilters = () => {
+  const applyFilters = React.useCallback(() => {
     let filtered = [...tasks];
 
     if (filters.status.length > 0) {
@@ -129,7 +106,7 @@ export default function TaskManagementDashboard() {
     }
 
     setFilteredTasks(filtered);
-  };
+  }, [tasks, filters]);
 
   const updateTaskStatus = (taskId: string, newStatus: Task['status']) => {
     setTasks(prev => prev.map(task => 
@@ -137,46 +114,6 @@ export default function TaskManagementDashboard() {
         ? { ...task, status: newStatus, updatedAt: new Date().toISOString() }
         : task
     ));
-  };
-
-  const createTask = async () => {
-    if (!newTask.title || !newTask.assignedTo || !newTask.dueDate) return;
-
-    const task: Task = {
-      id: Date.now().toString(),
-      title: newTask.title!,
-      description: newTask.description || '',
-      type: newTask.type || 'content-creation',
-      status: 'todo',
-      priority: newTask.priority || 'medium',
-      assignedTo: newTask.assignedTo!,
-      assignedBy: user?.email || '',
-      clientId: newTask.clientId || '',
-      clientName: 'Client Name', // Would be looked up from client ID
-      dueDate: newTask.dueDate!,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      estimatedHours: newTask.estimatedHours || 0,
-      actualHours: 0,
-      tags: newTask.tags || [],
-      comments: [],
-      dependencies: [],
-      attachments: []
-    };
-
-    setTasks(prev => [task, ...prev]);
-    setShowTaskModal(false);
-    setNewTask({
-      title: '',
-      description: '',
-      type: 'content-creation',
-      priority: 'medium',
-      assignedTo: '',
-      clientId: '',
-      dueDate: '',
-      estimatedHours: 0,
-      tags: []
-    });
   };
 
   const getPriorityColor = (priority: Task['priority']) => {

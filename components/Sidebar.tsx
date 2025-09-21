@@ -18,7 +18,7 @@ const Sidebar: React.FC = () => {
         <Toolbar />
         <Box sx={{ overflow: 'auto' }}>
           <List>
-            {[{ text: 'Home', icon: <Home /> }, { text: 'Search', icon: <Search /> }, { text: 'Profile', icon: <Person /> }, { text: 'Settings', icon: <Settings /> }].map((item, index) => (
+            {[{ text: 'Home', icon: <Home /> }, { text: 'Search', icon: <Search /> }, { text: 'Profile', icon: <Person /> }, { text: 'Settings', icon: <Settings /> }].map((item) => (
               <ListItem component="div" sx={{ cursor: 'pointer' }} key={item.text}>
                 <ListItemIcon>{item.icon}</ListItemIcon>
                 <ListItemText primary={item.text} />

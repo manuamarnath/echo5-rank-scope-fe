@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../src/components/auth/AuthContext';
 
 interface RankingData {
   keyword: string;
@@ -47,7 +46,6 @@ interface ClientROI {
 }
 
 export default function ReportingAnalytics() {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'rankings' | 'traffic' | 'content' | 'roi' | 'reports'>('rankings');
   const [dateRange, setDateRange] = useState({ start: '2024-01-01', end: '2024-01-31' });
   const [selectedClient, setSelectedClient] = useState('all');

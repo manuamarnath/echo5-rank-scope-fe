@@ -2,11 +2,32 @@ import React from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
 import axios from 'axios';
+import { Keyword } from '../src/components/keywords/interfaces';
 
-const fetcher = (url: string) => axios.get(url).then(res => res.data);
+interface Cluster {
+  id: string;
+  name: string;
+}
+
+interface Page {
+  _id: string;
+  title: string;
+}
+
+interface HeatmapData {
+  pages: Page[];
+  clusters: Cluster[];
+  grid: {
+    [pageId: string]: {
+      [clusterId: string]: Keyword[];
+    };
+  };
+}
+
+const fetcher = (url: string) => axios.get<HeatmapData>(url).then(res => res.data);
 
 export default function HeatmapGrid() {
-  const { data, error, isLoading } = useSWR('/heatmap', fetcher);
+  const { data, error, isLoading } = useSWR<HeatmapData>('/heatmap', fetcher);
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error loading heatmap.</div>;
@@ -19,18 +40,18 @@ export default function HeatmapGrid() {
         <thead>
           <tr>
             <th>Page</th>
-            {data.clusters.map((cluster: any) => (
+            {data.clusters.map((cluster: Cluster) => (
               <th key={cluster.id}>{cluster.name}</th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {data.pages.map((page: any) => (
+          {data.pages.map((page: Page) => (
             <tr key={page._id}>
               <td>{page.title}</td>
-              {data.clusters.map((cluster: any) => (
+              {data.clusters.map((cluster: Cluster) => (
                 <td key={cluster.id}>
-                  {data.grid[page._id]?.[cluster.id]?.map((kw: any) => (
+                  {data.grid[page._id]?.[cluster.id]?.map((kw: Keyword) => (
                     <span key={kw._id} className="px-2 py-1 bg-gray-100 rounded mr-1">{kw.text}</span>
                   ))}
                   {/* Actions: Create Page, Fix Cannibalization, Edit Secondary Keywords */}

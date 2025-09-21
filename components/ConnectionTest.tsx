@@ -129,8 +129,8 @@ export default function ConnectionTest() {
               <br /><br />
               <strong>Available URLs:</strong>
               <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
-                <li>Frontend: <a href="http://localhost:3001" target="_blank">http://localhost:3001</a></li>
-                <li>Backend API: <a href="http://localhost:5000" target="_blank">http://localhost:5000</a></li>
+                <li>Frontend: <a href="http://localhost:3003" target="_blank">http://localhost:3003</a></li>
+                <li>Backend API: <a href="/api/health" target="_blank">/api/health</a></li>
                 <li>API Health: <a href="/api/health" target="_blank">/api/health</a></li>
               </ul>
             </div>

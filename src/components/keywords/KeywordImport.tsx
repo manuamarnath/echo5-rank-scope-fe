@@ -15,7 +15,6 @@ interface KeywordImportProps {
 
 export default function KeywordImport({ onKeywordsImported, onCancel }: KeywordImportProps) {
   const [importMethod, setImportMethod] = useState<'csv' | 'gsc' | 'manual'>('csv');
-  const [csvData, setCsvData] = useState<string>('');
   const [manualKeywords, setManualKeywords] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [previewKeywords, setPreviewKeywords] = useState<KeywordData[]>([]);
@@ -27,9 +26,13 @@ export default function KeywordImport({ onKeywordsImported, onCancel }: KeywordI
     if (file && file.type === 'text/csv') {
       const reader = new FileReader();
       reader.onload = (e) => {
-        const csvContent = e.target?.result as string;
-        setCsvData(csvContent);
-        processCSVData(csvContent);
+        try {
+          const csvContent = e.target?.result as string;
+          processCSVData(csvContent);
+        } catch (error) {
+          console.error('Error parsing CSV:', error);
+          alert('Error parsing CSV file. Please check the format.');
+        }
       };
       reader.readAsText(file);
     }
@@ -140,7 +143,7 @@ export default function KeywordImport({ onKeywordsImported, onCancel }: KeywordI
             <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
               <strong>Expected CSV format:</strong><br />
               Header row with columns like: keyword, search_volume, difficulty<br />
-              Example: "seo services", 1000, 45
+              Example: &quot;seo services&quot;, 1000, 45
             </div>
           </div>
         );
@@ -194,7 +197,10 @@ export default function KeywordImport({ onKeywordsImported, onCancel }: KeywordI
                 fontSize: '0.875rem',
                 marginBottom: '1rem'
               }}
-              placeholder="Enter keywords, one per line:&#10;seo services&#10;digital marketing&#10;website optimization"
+              placeholder="Enter keywords, one per line:
+seo services
+digital marketing
+website optimization"
             />
             <button
               type="button"
@@ -348,7 +354,7 @@ export default function KeywordImport({ onKeywordsImported, onCancel }: KeywordI
             <button
               key={method.value}
               type="button"
-              onClick={() => setImportMethod(method.value as any)}
+              onClick={() => setImportMethod(method.value as 'csv' | 'gsc' | 'manual')}
               style={{
                 padding: '0.5rem 1rem',
                 backgroundColor: importMethod === method.value ? '#3b82f6' : '#f3f4f6',

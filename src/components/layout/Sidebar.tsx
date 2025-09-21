@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Divider, Chip, Avatar } from '@mui/material';
+import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Chip, Avatar } from '@mui/material';
+import { Theme } from '@mui/material/styles';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '../auth/AuthContext';
@@ -24,7 +25,7 @@ const navigationItems = [
 ];
 
 interface SidebarProps {
-  theme: any;
+  theme: Theme;
 }
 
 export default function Sidebar({ theme }: SidebarProps) {

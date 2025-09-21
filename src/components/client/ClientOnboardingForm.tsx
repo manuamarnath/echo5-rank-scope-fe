@@ -78,7 +78,7 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
 
   const totalSteps = 7;
 
-  const updateFormData = (field: keyof ClientFormData, value: any) => {
+  const updateFormData = (field: keyof ClientFormData, value: string | LocationData[] | string[] | PrimaryKeywordData[] | KeywordData[] | { googleSearchConsole: boolean; googleAnalytics: boolean; googleBusinessProfile: boolean }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -792,7 +792,7 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
               Tool Integrations
             </h3>
             <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
-              Select which Google tools you'd like to integrate with RankScope
+              Select which Google tools you&apos;d like to integrate with RankScope
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

@@ -88,7 +88,6 @@ export default function SignUp({ onToggleMode }: SignUpProps) {
     setLoading(true);
 
     const data = new FormData(event.currentTarget);
-    const name = data.get('name') as string;
     const email = data.get('email') as string;
     const password = data.get('password') as string;
 

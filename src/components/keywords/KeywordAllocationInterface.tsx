@@ -1,60 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-
-import * as KeywordService from '../../../services/keywordService';
-
-// These interfaces are already defined in this file, so we can remove this import
+import { Keyword, Client, TeamMember, KeywordAllocationProps } from './interfaces';
 
 
 
- interface Keyword {
-   id?: string;
-   _id?: string;
-   text: string;
-   intent?: string;
-   searchVolume?: number;
-   volume?: number;
-   difficulty?: number;
-   geo?: string;
-   allocatedTo?: string;
-   role?: 'owner' | 'employee' | 'client';
-   status?: 'pending' | 'allocated' | 'in-progress' | 'completed';
-   isPrimary?: boolean;
- }
-
- interface Client {
-   _id: string;
-   name: string;
-   industry: string;
-   website?: string;
-   locations?: Array<{
-     city: string;
-     state: string;
-     country: string;
-     radius?: number;
-     radiusUnit?: string;
-   }>;
-   services?: string[];
-   competitors?: string[];
- }
-
- interface TeamMember {
-   id: string;
-   name: string;
-   email: string;
-   role: 'owner' | 'employee' | 'client';
- }
- 
- interface KeywordAllocationProps {
-   onClose?: () => void;
-   clientId?: string;
- }
-
-import { Box, Tabs, Tab, Paper, Grid, Typography, Button, TextField, Select, MenuItem, FormControl, InputLabel, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Checkbox, Badge, Stack } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { styled } from '@mui/material/styles';
-
-export default function KeywordAllocationInterface({ onClose, clientId }: KeywordAllocationProps) {
+export default function KeywordAllocationInterface({ onClose }: KeywordAllocationProps) {
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [bulkText, setBulkText] = useState('');
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
@@ -69,7 +18,7 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [newKeyword, setNewKeyword] = useState({
     text: '',
-    intent: 'informational',
+    intent: 'informational' as const,
     geo: '',
     volume: '',
     difficulty: ''
@@ -98,7 +47,7 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
     try {
       let response = await fetch('/api/clients/demo');
       if (!response.ok) {
-        response = await fetch('http://localhost:5000/clients/demo');
+        response = await fetch('/api/clients/demo');
       }
       if (response.ok) {
         const data = await response.json();
@@ -107,6 +56,7 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
         setClients([]);
       }
     } catch (error) {
+      console.error('Error fetching clients:', error);
       setClients([]);
     }
   };
@@ -122,6 +72,7 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
         setClientKeywords([]);
       }
     } catch (error) {
+      console.error('Error fetching keywords:', error);
       setClientKeywords([]);
     }
   };
@@ -154,6 +105,7 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
         alert(error.error || 'Failed to create keyword');
       }
     } catch (error) {
+      console.error('Error creating keyword:', error);
       alert('Failed to create keyword');
     }
   };
@@ -183,6 +135,7 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
         alert(error.error || 'Failed to update keyword');
       }
     } catch (error) {
+      console.error('Error updating keyword:', error);
       alert('Failed to update keyword');
     }
   };
@@ -201,6 +154,7 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
         alert('Failed to delete keyword');
       }
     } catch (error) {
+      console.error('Error deleting keyword:', error);
       alert('Failed to delete keyword');
     }
   };
@@ -217,7 +171,7 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
       return {
         id: `kw-${Date.now()}-${index}`,
         text: keyword,
-        intent: (parts[1] as any) || 'informational',
+        intent: (parts[1] as 'informational' | 'commercial' | 'transactional' | 'navigational') || 'informational',
         searchVolume: parts[2] ? parseInt(parts[2]) : undefined,
         difficulty: parts[3] ? parseInt(parts[3]) : undefined,
         geo: parts[4] || undefined,
@@ -387,7 +341,7 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
                 </label>
                 <select
                   value={newKeyword.intent}
-                  onChange={e => setNewKeyword(prev => ({ ...prev, intent: e.target.value }))}
+                  onChange={e => setNewKeyword(prev => ({ ...prev, intent: e.target.value as 'informational' | 'commercial' | 'transactional' | 'navigational' }))}
                   style={{
                     width: '100%',
                     padding: '0.5rem',
@@ -669,7 +623,7 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
         </div>
         <div>
           <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>Role</label>
-          <select value={allocationRole} onChange={e => setAllocationRole(e.target.value as any)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}>
+          <select value={allocationRole} onChange={e => setAllocationRole(e.target.value as 'owner' | 'employee' | 'client')} style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem' }}>
             <option value="owner">Owner</option>
             <option value="employee">Employee</option>
             <option value="client">Client</option>
@@ -929,7 +883,7 @@ export default function KeywordAllocationInterface({ onClose, clientId }: Keywor
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setView(tab.id as any)}
+                onClick={() => setView(tab.id as 'manage' | 'upload' | 'allocate')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
