@@ -257,7 +257,7 @@ export const fetchClients = async (token?: string) => {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE}/clients`, {
+    const response = await fetch('http://localhost:5001/api/clients/demo', {
       headers: {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json',

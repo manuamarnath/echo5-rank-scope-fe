@@ -95,26 +95,23 @@ export default function BriefGenerationInterface() {
         `Meta Description: ${newBrief.metaDescription}\n` +
         `Notes: ${newBrief.notes}`;
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('http://localhost:5001/content/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            { role: 'system', content: 'You are an expert SEO content writer.' },
-            { role: 'user', content: prompt }
-          ],
+          prompt: prompt,
+          model: 'meta-llama/llama-3.3-70b-instruct:free',
           max_tokens: 2048,
           temperature: 0.7,
         }),
       });
 
-      if (!response.ok) throw new Error('OpenAI API error: ' + response.statusText);
+      if (!response.ok) throw new Error('Content generation API error: ' + response.statusText);
       const data = await response.json();
-      setGeneratedContent(data.choices[0].message.content);
+      setGeneratedContent(data.content);
     } catch (error) {
       setGeneratedContent('Error generating content: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {

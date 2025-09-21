@@ -47,52 +47,36 @@ interface KeywordSuggestionsResponse {
 }
 
 class AIContentService {
-  private apiKey: string;
-  private baseUrl: string = 'https://api.openai.com/v1';
+  private baseUrl: string = 'http://localhost:5001';
 
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.NEXT_PUBLIC_OPENAI_API_KEY || '';
+  constructor() {
+    // No API key needed since we're using the backend
   }
 
   async generateContentOutline(request: ContentOutlineRequest): Promise<ContentOutlineResponse> {
     try {
-      // For demo purposes, return mock data
-      // In production, this would call the OpenAI API
-      if (!this.apiKey) {
-        return this.getMockContentOutline(request);
-      }
-
       const prompt = this.buildContentOutlinePrompt(request);
       
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      const response = await fetch(`${this.baseUrl}/content/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an expert SEO content strategist. Create comprehensive, SEO-optimized content outlines.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
+          prompt: prompt,
+          model: 'meta-llama/llama-3.3-70b-instruct:free',
           max_tokens: 1500,
           temperature: 0.7,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.statusText}`);
+        throw new Error(`Content generation API error: ${response.statusText}`);
       }
 
       const data = await response.json();
-      return this.parseContentOutlineResponse(data.choices[0].message.content);
+      return this.parseContentOutlineResponse(data.content);
     } catch (error) {
       console.error('Error generating content outline:', error);
       // Fallback to mock data if API fails
@@ -102,41 +86,28 @@ class AIContentService {
 
   async generateKeywordSuggestions(request: KeywordSuggestionsRequest): Promise<KeywordSuggestionsResponse> {
     try {
-      if (!this.apiKey) {
-        return this.getMockKeywordSuggestions(request);
-      }
-
       const prompt = this.buildKeywordSuggestionsPrompt(request);
       
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      const response = await fetch(`${this.baseUrl}/content/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an expert keyword researcher. Generate relevant, high-value keyword suggestions for SEO.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
+          prompt: prompt,
+          model: 'meta-llama/llama-3.3-70b-instruct:free',
           max_tokens: 1000,
           temperature: 0.7,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.statusText}`);
+        throw new Error(`Content generation API error: ${response.statusText}`);
       }
 
       const data = await response.json();
-      return this.parseKeywordSuggestionsResponse(data.choices[0].message.content);
+      return this.parseKeywordSuggestionsResponse(data.content);
     } catch (error) {
       console.error('Error generating keyword suggestions:', error);
       return this.getMockKeywordSuggestions(request);
@@ -149,10 +120,6 @@ class AIContentService {
     outline: string[];
   }): Promise<{ title: string; description: string; }> {
     try {
-      if (!this.apiKey) {
-        return this.getMockMetaData(content);
-      }
-
       const prompt = `
         Optimize SEO meta data for:
         Target Keyword: ${content.keyword}
@@ -170,35 +137,26 @@ class AIContentService {
         }
       `;
 
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      const response = await fetch(`${this.baseUrl}/content/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an expert SEO copywriter. Create compelling, optimized meta titles and descriptions.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
+          prompt: prompt,
+          model: 'meta-llama/llama-3.3-70b-instruct:free',
           max_tokens: 300,
           temperature: 0.7,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.statusText}`);
+        throw new Error(`Content generation API error: ${response.statusText}`);
       }
 
       const data = await response.json();
-      return JSON.parse(data.choices[0].message.content);
+      return JSON.parse(data.content);
     } catch (error) {
       console.error('Error optimizing meta data:', error);
       return this.getMockMetaData(content);
