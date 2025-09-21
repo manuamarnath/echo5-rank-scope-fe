@@ -1,3 +1,4 @@
+import React from 'react';
 import { useAuth } from '../src/components/auth/AuthContext';
 import AuthWrapper from '../src/components/auth/AuthWrapper';
 import MainLayout from '../src/components/layout/MainLayout';

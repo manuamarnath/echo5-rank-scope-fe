@@ -1,3 +1,4 @@
+import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '../src/components/auth/AuthContext';
 import MainLayout from '../src/components/layout/MainLayout';

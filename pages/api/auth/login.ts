@@ -1,6 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { IncomingMessage } from 'http';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+interface ExtendedNextApiRequest extends NextApiRequest {
+  method?: string;
+  headers: IncomingMessage['headers'];
+}
+
+export default async function handler(req: ExtendedNextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }

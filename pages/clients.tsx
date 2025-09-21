@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../src/components/auth/AuthContext';
 import MainLayout from '../src/components/layout/MainLayout';
 import ClientOnboardingForm from '../src/components/client/ClientOnboardingForm';

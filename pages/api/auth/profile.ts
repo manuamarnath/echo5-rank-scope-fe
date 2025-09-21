@@ -1,6 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { IncomingMessage } from 'http';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+interface ExtendedNextApiRequest extends NextApiRequest {
+  method?: string;
+  headers: IncomingMessage['headers'];
+}
+
+export default async function handler(req: ExtendedNextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
@@ -11,8 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     console.log('Profile endpoint: Making request to:', `${backendUrl}/api/auth/me`);
     
-    // Get authorization header (ignore TypeScript error for now)
-    const authHeader = (req as any).headers?.authorization || '';
+    // Get authorization header properly
+    const authHeader = req.headers.authorization as string || '';
     
     // Forward the request to the backend
     const response = await fetch(`${backendUrl}/api/auth/me`, {

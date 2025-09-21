@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../src/components/auth/AuthContext';
 import MainLayout from '../src/components/layout/MainLayout';
 import KeywordAllocationInterface from '../src/components/keywords/KeywordAllocationInterface';

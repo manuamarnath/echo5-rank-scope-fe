@@ -1,8 +1,14 @@
 const API_BASE = '/api';
 
-// Get token from auth context
-export const getAuthToken = () => {
+// Get auth token from localStorage
+const getAuthToken = () => {
   return localStorage.getItem('token');
+};
+
+declare const process: {
+  env: {
+    NEXT_PUBLIC_API_BASE_URL?: string;
+  };
 };
 
 export interface Brief {

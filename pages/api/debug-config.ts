@@ -1,5 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+declare const process: {
+  env: {
+    NEXT_PUBLIC_API_BASE_URL?: string;
+    NEXT_PUBLIC_ENVIRONMENT?: string;
+  };
+};
+
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   return res.status(200).json({
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'undefined',

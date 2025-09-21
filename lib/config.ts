@@ -1,4 +1,11 @@
 // Configuration utility for environment-specific settings
+declare const process: {
+  env: {
+    NEXT_PUBLIC_API_BASE_URL?: string;
+    NEXT_PUBLIC_ENVIRONMENT?: string;
+  };
+};
+
 export const config = {
   apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001',
   environment: process.env.NEXT_PUBLIC_ENVIRONMENT || 'development',
