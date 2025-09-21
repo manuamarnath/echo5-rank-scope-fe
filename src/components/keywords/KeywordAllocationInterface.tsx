@@ -16,9 +16,15 @@ export default function KeywordAllocationInterface({ onClose }: KeywordAllocatio
   const [clientKeywords, setClientKeywords] = useState<Keyword[]>([]);
   const [editingKeyword, setEditingKeyword] = useState<Keyword | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [newKeyword, setNewKeyword] = useState({
+  const [newKeyword, setNewKeyword] = useState<{
+    text: string;
+    intent: 'informational' | 'commercial' | 'transactional' | 'navigational';
+    geo: string;
+    volume: string;
+    difficulty: string;
+  }>({
     text: '',
-    intent: 'informational' as const,
+    intent: 'informational',
     geo: '',
     volume: '',
     difficulty: ''

@@ -11,6 +11,9 @@ export interface Keyword {
   role?: 'owner' | 'employee' | 'client';
   status?: 'pending' | 'allocated' | 'in-progress' | 'completed';
   isPrimary?: boolean;
+  currentRank?: number;
+  targetLocation?: string;
+  previousRank?: number;
 }
 
 export interface Client {

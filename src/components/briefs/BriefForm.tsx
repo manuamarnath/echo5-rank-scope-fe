@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-
 import { Box, Button, TextField, Typography, Select, MenuItem, IconButton, Chip, Divider, FormControl, InputLabel } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons/material';
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -212,7 +210,7 @@ const BriefForm: React.FC<BriefFormProps> = ({ onSubmit, onCancel }) => {
             <Typography variant="subtitle1">Keyword {index + 1}</Typography>
             {formData.targetKeywords.length > 1 && (
               <IconButton onClick={() => removeTargetKeyword(index)} color="error">
-                <DeleteIcon />
+                ×
               </IconButton>
             )}
           </Box>
@@ -261,10 +259,9 @@ const BriefForm: React.FC<BriefFormProps> = ({ onSubmit, onCancel }) => {
       ))}
       <Button
         variant="outlined"
-        startIcon={<AddIcon />}
         onClick={addTargetKeyword}
       >
-        Add Target Keyword
+        + Add Target Keyword
       </Button>
     </Box>
   );
@@ -285,7 +282,7 @@ const BriefForm: React.FC<BriefFormProps> = ({ onSubmit, onCancel }) => {
             <Typography variant="subtitle1">Section {index + 1}</Typography>
             {formData.contentSections.length > 1 && (
               <IconButton onClick={() => removeContentSection(index)} color="error">
-                <DeleteIcon />
+                ×
               </IconButton>
             )}
           </Box>
@@ -315,10 +312,9 @@ const BriefForm: React.FC<BriefFormProps> = ({ onSubmit, onCancel }) => {
       ))}
       <Button
         variant="outlined"
-        startIcon={<AddIcon />}
         onClick={addContentSection}
       >
-        Add Content Section
+        + Add Content Section
       </Button>
     </Box>
   );

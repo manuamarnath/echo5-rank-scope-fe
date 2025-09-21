@@ -1,8 +1,9 @@
+import Link from 'next/link';
 import { useAuth } from '../src/components/auth/AuthContext';
 import MainLayout from '../src/components/layout/MainLayout';
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { } = useAuth();
 
   return (
     <MainLayout>
@@ -85,7 +86,7 @@ export default function Dashboard() {
           gap: '1.5rem',
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))'
         }}>
-          <a 
+          <Link 
             href="/clients"
             style={{ 
               backgroundColor: 'white', 
@@ -137,9 +138,9 @@ export default function Dashboard() {
             }}>
               View Clients →
             </span>
-          </a>
+          </Link>
 
-          <a 
+          <Link 
             href="/pages"
             style={{ 
               backgroundColor: 'white', 
@@ -191,7 +192,7 @@ export default function Dashboard() {
             }}>
               Manage Pages →
             </span>
-          </a>
+          </Link>
 
           <div style={{ 
             backgroundColor: 'white', 

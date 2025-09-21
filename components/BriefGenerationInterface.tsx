@@ -1,31 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../src/components/auth/AuthContext';
-import AIContentService from '../services/AIContentService';
 import briefService, { Brief as BriefType } from '../services/briefService';
 import { Keyword } from '../src/components/keywords/interfaces';
 
-interface Competitor {
-  url: string;
-  title: string;
-  wordCount: number;
-  headings: string[];
-  metaDescription: string;
-}
-
 export default function BriefGenerationInterface() {
-  const { user } = useAuth();
+  const { } = useAuth();
   const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'templates'>('create');
   const [briefs, setBriefs] = useState<BriefType[]>([]);
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [clients, setClients] = useState<{_id: string, name: string}[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
-  const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
-  const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [templates, setTemplates] = useState<Partial<BriefType>[]>([]);
+  const [templates] = useState<Partial<BriefType>[]>([]);
   const [newBrief, setNewBrief] = useState<Partial<BriefType>>({
     title: '',
     targetKeyword: '',
@@ -169,14 +158,29 @@ export default function BriefGenerationInterface() {
       if (!newBrief.targetKeyword) {
         throw new Error('Please select a target keyword');
       }
+
+      if (!newBrief.title) {
+        throw new Error('Please enter a brief title');
+      }
       
       const briefToSave = {
         ...newBrief,
+        title: newBrief.title,
+        targetKeyword: newBrief.targetKeyword || '',
+        url: newBrief.url || '',
+        contentType: newBrief.contentType || 'blog' as const,
+        wordCount: newBrief.wordCount || 0,
+        tone: newBrief.tone || 'professional' as const,
+        targetAudience: newBrief.targetAudience || '',
+        metaTitle: newBrief.metaTitle || '',
+        metaDescription: newBrief.metaDescription || '',
+        assignedTo: newBrief.assignedTo || '',
+        dueDate: newBrief.dueDate || '',
+        notes: newBrief.notes || '',
         clientId: selectedClientId,
         secondaryKeywords: newBrief.secondaryKeywords || [],
         outline: newBrief.outline || [],
-        assignedTo: newBrief.assignedTo || '',
-      };
+      } as Omit<BriefType, 'id' | 'createdAt' | 'updatedAt'>;
       
       const savedBrief = await briefService.createBrief(briefToSave);
       
@@ -210,12 +214,6 @@ export default function BriefGenerationInterface() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const updateBriefStatus = (briefId: string, status: BriefType['status']) => {
-    setBriefs(prev => prev.map(brief => 
-      brief.id === briefId ? { ...brief, status } : brief
-    ));
   };
 
   const deleteBrief = (briefId: string) => {
@@ -356,7 +354,7 @@ export default function BriefGenerationInterface() {
               Brief Title
             </label>
             <button
-              onClick={() => setShowTemplateModal(true)}
+              onClick={() => {/* Template functionality not implemented */}}
               disabled={templates.length === 0}
               style={{
                 padding: '8px 16px',
@@ -396,7 +394,7 @@ export default function BriefGenerationInterface() {
               </label>
               <select
                 value={newBrief.contentType}
-                onChange={(e) => setNewBrief(prev => ({ ...prev, contentType: e.target.value as Brief['contentType'] }))}
+                onChange={(e) => setNewBrief(prev => ({ ...prev, contentType: e.target.value as BriefType['contentType'] }))}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -438,7 +436,7 @@ export default function BriefGenerationInterface() {
               </label>
               <select
                 value={newBrief.tone}
-                onChange={(e) => setNewBrief(prev => ({ ...prev, tone: e.target.value as Brief['tone'] }))}
+                onChange={(e) => setNewBrief(prev => ({ ...prev, tone: e.target.value as BriefType['tone'] }))}
                 style={{
                   width: '100%',
                   padding: '12px',

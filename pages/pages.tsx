@@ -25,7 +25,7 @@ interface Keyword {
 }
 
 export default function PagesManagement() {
-  const { user } = useAuth();
+  const { } = useAuth();
   const [showKeywordAllocation, setShowKeywordAllocation] = useState(false);
   const [pages, setPages] = useState<Page[]>([]);
   const [keywords, setKeywords] = useState<Keyword[]>([]);

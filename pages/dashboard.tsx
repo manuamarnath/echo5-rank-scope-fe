@@ -122,7 +122,7 @@ export default function Dashboard() {
             Welcome back, {user?.email?.split('@')[0] || 'User'}! 👋
           </Typography>
           <Typography variant="subtitle1" color="text.secondary">
-            Here's what's happening with your SEO campaigns today.
+            Here&apos;s what&apos;s happening with your SEO campaigns today.
           </Typography>
         </Box>
 

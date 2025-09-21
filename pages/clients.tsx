@@ -18,6 +18,37 @@ interface Client {
   createdAt: string;
 }
 
+interface ClientFormData {
+  name: string;
+  industry: string;
+  website: string;
+  locations: Array<{city: string; state: string; country: string; zip: string; radius: number; radiusUnit: 'miles' | 'km'}>;
+  services: string[];
+  competitors: string[];
+  primaryKeywords: Array<{keyword: string; priority: number; targetLocation?: string; notes?: string}>;
+  seedKeywords: Array<{keyword: string; searchVolume?: number; difficulty?: number; intent?: string; source: string}>;
+  integrations: {
+    googleSearchConsole: boolean;
+    googleAnalytics: boolean;
+    googleBusinessProfile: boolean;
+  };
+}
+
+interface BackendClient {
+  _id: string;
+  name: string;
+  industry: string;
+  locations?: Array<{city: string; state: string}>;
+  services?: string[];
+  competitors?: string[];
+  integrations?: {
+    googleSearchConsole: boolean;
+    googleAnalytics: boolean;
+    googleBusinessProfile: boolean;
+  };
+  createdAt?: string;
+}
+
 export default function ClientsPage() {
   const { user } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -29,12 +60,12 @@ export default function ClientsPage() {
     try {
       const response = await fetch('/api/clients/demo');
       if (response.ok) {
-        const backendClients = await response.json();
-        const formattedClients = backendClients.map((client: any) => ({
+        const backendClients: BackendClient[] = await response.json();
+        const formattedClients = backendClients.map((client: BackendClient) => ({
           id: client._id,
           name: client.name,
           industry: client.industry,
-          locations: client.locations?.map((loc: any) => `${loc.city}, ${loc.state}`) || [],
+          locations: client.locations?.map((loc: {city: string; state: string}) => `${loc.city}, ${loc.state}`) || [],
           services: client.services || [],
           competitors: client.competitors || [],
           integrations: client.integrations || {
@@ -58,7 +89,7 @@ export default function ClientsPage() {
     fetchClients();
   }, []);
 
-  const handleClientComplete = async (clientData: any) => {
+  const handleClientComplete = async (clientData: ClientFormData) => {
     try {
       console.log('Submitting client data:', clientData);
       
@@ -76,7 +107,7 @@ export default function ClientsPage() {
         throw new Error(errorData.error || 'Failed to create client');
       }
 
-      const savedClient = await response.json();
+      const savedClient: BackendClient = await response.json();
       console.log('Client saved successfully:', savedClient);
 
       // Add to local state for immediate UI update
@@ -84,7 +115,7 @@ export default function ClientsPage() {
         id: savedClient._id,
         name: savedClient.name,
         industry: savedClient.industry,
-        locations: savedClient.locations?.map((loc: any) => `${loc.city}, ${loc.state}`) || [],
+        locations: savedClient.locations?.map((loc: {city: string; state: string}) => `${loc.city}, ${loc.state}`) || [],
         services: savedClient.services || [],
         competitors: savedClient.competitors || [],
         integrations: savedClient.integrations || {

@@ -4,7 +4,6 @@ import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Label } from './ui/label';
 
 interface ClientFormData {
   name: string;

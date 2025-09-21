@@ -35,7 +35,13 @@ export default function Home() {
     return <AuthWrapper />;
   }
 
-  const quickActions = [
+  const quickActions: Array<{
+    title: string;
+    description: string;
+    href: string;
+    icon: React.ComponentType;
+    color: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info';
+  }> = [
     {
       title: 'Dashboard',
       description: 'View your SEO overview and statistics',
@@ -101,7 +107,9 @@ export default function Home() {
                 }}>
                   <CardContent sx={{ pb: 1 }}>
                     <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
-                      <IconComponent color={action.color as any} sx={{ fontSize: 32 }} />
+                      <Box sx={{ fontSize: 32, color: `${action.color}.main` }}>
+                        <IconComponent />
+                      </Box>
                       <Typography variant="h6" component="h3" sx={{ fontWeight: 600 }}>
                         {action.title}
                       </Typography>
@@ -115,7 +123,7 @@ export default function Home() {
                       component={Link}
                       href={action.href}
                       variant="contained"
-                      color={action.color as any}
+                      color={action.color}
                       size="small"
                       sx={{ ml: 1 }}
                     >

@@ -1,6 +1,5 @@
 import React from 'react';
 import useSWR from 'swr';
-import Link from 'next/link';
 import axios from 'axios';
 import { Keyword } from '../src/components/keywords/interfaces';
 
