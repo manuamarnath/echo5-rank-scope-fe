@@ -26,11 +26,11 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001'}/api/:path*`, // Proxy to Backend with /api prefix
+        destination: process.env.NODE_ENV === 'production' ? `https://echo5-rank-scope-be.onrender.com/api/:path*` : `http://localhost:5001/api/:path*`, // Proxy to Backend with /api prefix
       },
       {
         source: '/health',
-        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001'}/health`, // Direct health check
+        destination: process.env.NODE_ENV === 'production' ? `https://echo5-rank-scope-be.onrender.com/health` : `http://localhost:5001/health`, // Direct health check
       },
     ];
   },
