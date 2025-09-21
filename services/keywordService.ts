@@ -4,7 +4,7 @@ declare const process: {
   };
 };
 
-const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001'}/api`;
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echo5-rank-scope-be.onrender.com'}/api`;
 
 // Get token from auth context
 export const getAuthToken = () => {

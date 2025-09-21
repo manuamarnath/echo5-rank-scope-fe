@@ -7,7 +7,7 @@ declare const process: {
 };
 
 export const config = {
-  apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001',
+  apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echo5-rank-scope-be.onrender.com',
   environment: process.env.NEXT_PUBLIC_ENVIRONMENT || 'development',
   isDevelopment: process.env.NEXT_PUBLIC_ENVIRONMENT === 'development',
   isProduction: process.env.NEXT_PUBLIC_ENVIRONMENT === 'production',

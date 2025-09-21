@@ -53,7 +53,7 @@ declare const process: {
 };
 
 class AIContentService {
-  private baseUrl: string = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';
+  private baseUrl: string = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echo5-rank-scope-be.onrender.com';
 
   constructor() {
     // No API key needed since we're using the backend

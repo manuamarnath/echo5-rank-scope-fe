@@ -30,7 +30,7 @@ const nextConfig = {
       },
       {
         source: '/health',
-        destination: process.env.NODE_ENV === 'production' ? `https://echo5-rank-scope-be.onrender.com/health` : `http://localhost:5001/health`, // Direct health check
+  destination: `https://echo5-rank-scope-be.onrender.com/health`, // Direct health check
       },
     ];
   },
