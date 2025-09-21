@@ -6,8 +6,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Get the backend URL from environment
-    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';
+    // Temporarily hardcode backend URL for testing
+    const backendUrl = 'https://echo5-rank-scope-be.onrender.com';
     
     // Forward the request to the backend
     const response = await fetch(`${backendUrl}/api/auth/login`, {
