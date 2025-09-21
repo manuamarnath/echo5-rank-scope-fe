@@ -1,18 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import type { IncomingHttpHeaders } from 'http';
 
-interface ExtendedNextApiRequest extends NextApiRequest {
-  headers: IncomingHttpHeaders;
-}
-
-export default async function handler(req: ExtendedNextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
-    // Temporarily hardcode backend URL for testing
-    const backendUrl = 'https://echo5-rank-scope-be.onrender.com';
+  // Prefer environment variable for backend URL in production, fall back to deployed backend
+  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echo5-rank-scope-be.onrender.com';
     
     // Forward the request to the backend
     const response = await fetch(`${backendUrl}/api/auth/register`, {
