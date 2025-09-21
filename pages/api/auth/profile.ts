@@ -1,31 +1,32 @@
-import jwt from 'jsonwebtoken';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
+  try {
+    // Get the backend URL from environment
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';
+    
+    // Forward the request to the backend
+    const response = await fetch(`${backendUrl}/api/auth/me`, {
+      method: 'GET',
+      headers: {
+        'Authorization': req.headers.authorization || '',
+        'Content-Type': 'application/json',
+      },
+    });
 
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
+    const data = await response.json();
+    
+    if (!response.ok) {
+      return res.status(response.status).json(data);
+    }
+
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error('Profile endpoint error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
   }
-  // Validate the token (replace with real JWT validation)
-  const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
-  if (!decoded) {
-    return res.status(401).json({ message: 'Invalid token' });
-  }
-  const user = {
-    id: decoded.id,
-    email: decoded.email,
-    role: decoded.role,
-    clientId: decoded.clientId
-  };
-  return res.status(200).json(user);
 }
