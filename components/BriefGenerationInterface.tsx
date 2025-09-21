@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../src/components/auth/AuthContext';
 import briefService, { Brief as BriefType } from '../services/briefService';
 import { Keyword } from '../src/components/keywords/interfaces';
+import { endpoints } from '../lib/config';
 
 export default function BriefGenerationInterface() {
   const { } = useAuth();
@@ -95,7 +96,7 @@ export default function BriefGenerationInterface() {
         `Meta Description: ${newBrief.metaDescription}\n` +
         `Notes: ${newBrief.notes}`;
 
-      const response = await fetch('http://localhost:5001/content/generate', {
+      const response = await fetch(endpoints.content.generate, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -257,7 +257,7 @@ export const fetchClients = async (token?: string) => {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch('http://localhost:5001/api/clients/demo', {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001'}/api/clients/demo`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json',

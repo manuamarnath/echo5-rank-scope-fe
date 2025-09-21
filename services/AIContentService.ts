@@ -47,7 +47,7 @@ interface KeywordSuggestionsResponse {
 }
 
 class AIContentService {
-  private baseUrl: string = 'http://localhost:5001';
+  private baseUrl: string = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';
 
   constructor() {
     // No API key needed since we're using the backend
