@@ -66,11 +66,16 @@ export default function Audits() {
         targetUrl = `https://${targetUrl}`;
       }
 
+      // Include authorization token if present
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const response = await fetch('/api/audits', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ 
           name: `Audit for ${targetUrl}`,
           baseUrl: targetUrl,
@@ -80,11 +85,26 @@ export default function Audits() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Crawl failed');
+      // Try to parse server response (even for non-OK) to show useful messages
+      let data;
+      try {
+        data = await response.json();
+      } catch (err) {
+        data = null;
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        // If server returned a message, surface it; otherwise use generic message
+        const serverMessage = data?.message || data?.error || 'Crawl failed';
+        // If auth error, give actionable message
+        if (response.status === 401) {
+          setError(serverMessage || 'Authentication required. Please sign in.');
+        } else {
+          setError(serverMessage || 'Failed to crawl website. Please check the URL and try again.');
+        }
+        return;
+      }
+
       setCrawlResults(data);
     } catch {
       setError('Failed to crawl website. Please check the URL and try again.');
