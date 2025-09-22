@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Keyword, Client } from './interfaces';
 
@@ -20,7 +20,11 @@ export default function KeywordRankChecker() {
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [isChecking, setIsChecking] = useState(false);
+  const [checkingMap, setCheckingMap] = useState<Record<string, boolean>>({});
   const [rankResults, setRankResults] = useState<RankResult[]>([]);
+  const [historyMap, setHistoryMap] = useState<Record<string, any[]>>({});
+  const [historyLoadingMap, setHistoryLoadingMap] = useState<Record<string, boolean>>({});
+  const [historyOpenMap, setHistoryOpenMap] = useState<Record<string, boolean>>({});
   const [searchEngine, setSearchEngine] = useState<string>('google');
   const [device, setDevice] = useState<string>('desktop');
   const [location, setLocation] = useState<string>('');
@@ -143,28 +147,45 @@ export default function KeywordRankChecker() {
     setRankResults([]);
 
     try {
-      const response = await fetch('/api/keywords/check-ranks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          clientId: selectedClientId,
-          keywordIds: selectedKeywords,
-          domain: domain.trim(),
-          searchEngine,
-          device,
-          location: location.trim()
-        }),
+      setRankResults([]);
+      // Prepare status map
+      const statusMap: Record<string, boolean> = {};
+      selectedKeywords.forEach(id => { statusMap[id] = true; });
+      setCheckingMap(statusMap);
+
+      // Limit concurrency to avoid rate limits
+      const concurrency = 3; // default concurrency, can be made configurable
+      const queue = [...selectedKeywords];
+
+      const workers = new Array(concurrency).fill(null).map(async () => {
+        while (queue.length > 0) {
+          const keywordId = queue.shift();
+          if (!keywordId) break;
+          try {
+            const response = await fetch('/api/keywords/check-rank', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ keywordId, clientId: selectedClientId, domain: domain.trim(), searchEngine, device, location: location.trim() })
+            });
+
+            if (response.ok) {
+              const result = await response.json();
+              setRankResults(prev => [...prev, result]);
+            } else {
+              const err = await response.json().catch(() => ({ message: 'Unknown error' }));
+              const result = { keywordId, keyword: 'unknown', position: null, url: null, searchEngine, device, location, checkedAt: new Date().toISOString(), error: err.message || 'Error' };
+              setRankResults(prev => [...prev, result]);
+            }
+          } catch (err) {
+            const result = { keywordId, keyword: 'unknown', position: null, url: null, searchEngine, device, location, checkedAt: new Date().toISOString(), error: err.message || String(err) };
+            setRankResults(prev => [...prev, result]);
+          } finally {
+            setCheckingMap(prev => ({ ...prev, [keywordId]: false }));
+          }
+        }
       });
 
-      if (response.ok) {
-        const results = await response.json();
-        setRankResults(results);
-      } else {
-        const error = await response.json();
-        alert(`Error checking ranks: ${error.message}`);
-      }
+      await Promise.all(workers);
     } catch (error) {
       console.error('Error checking ranks:', error);
       alert('Failed to check ranks. Please try again.');
@@ -586,6 +607,9 @@ export default function KeywordRankChecker() {
                     Keyword
                   </th>
                   <th style={{ padding: '0.75rem', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>
+                    History
+                  </th>
+                  <th style={{ padding: '0.75rem', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>
                     Position
                   </th>
                   <th style={{ padding: '0.75rem', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>
@@ -605,80 +629,161 @@ export default function KeywordRankChecker() {
               <tbody>
                 {rankResults.map((result, index) => {
                   const keyword = keywords.find(k => k._id === result.keywordId);
+                  const id = result.keywordId;
                   return (
-                    <tr key={index} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                      <td style={{ padding: '0.75rem' }}>
-                        <div>
-                          <span style={{ fontWeight: keyword?.isPrimary ? '600' : 'normal' }}>
-                            {result.keyword}
-                          </span>
-                          {keyword?.isPrimary && (
-                            <span style={{
-                              marginLeft: '0.5rem',
-                              backgroundColor: '#fef3c7',
-                              color: '#92400e',
-                              padding: '0.125rem 0.375rem',
-                              borderRadius: '0.25rem',
-                              fontSize: '0.75rem'
-                            }}>
-                              PRIMARY
+                    <React.Fragment key={id}>
+                      <tr style={{ borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '0.75rem' }}>
+                          <div>
+                            <span style={{ fontWeight: keyword?.isPrimary ? '600' : 'normal' }}>
+                              {result.keyword}
                             </span>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                        {result.error ? (
-                          <span style={{ color: '#ef4444' }}>Error</span>
-                        ) : result.position ? (
-                          <span style={{
-                            backgroundColor: result.position <= 10 ? '#dcfce7' : result.position <= 50 ? '#fef3c7' : '#fee2e2',
-                            color: result.position <= 10 ? '#166534' : result.position <= 50 ? '#92400e' : '#dc2626',
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '0.25rem',
-                            fontWeight: '500'
-                          }}>
-                            #{result.position}
-                          </span>
-                        ) : (
-                          <span style={{ color: '#6b7280' }}>Not found</span>
-                        )}
-                      </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                        <span style={{ 
-                          color: getRankChangeColor(result.position, keyword?.previousRank),
-                          fontSize: '1.125rem'
-                        }}>
-                          {getRankChangeIcon(result.position, keyword?.previousRank)}
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.75rem', maxWidth: '200px' }}>
-                        {result.url ? (
-                          <a
-                            href={result.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            {keyword?.isPrimary && (
+                              <span style={{
+                                marginLeft: '0.5rem',
+                                backgroundColor: '#fef3c7',
+                                color: '#92400e',
+                                padding: '0.125rem 0.375rem',
+                                borderRadius: '0.25rem',
+                                fontSize: '0.75rem'
+                              }}>
+                                PRIMARY
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                          <button
+                            onClick={async () => {
+                              const isOpen = !!historyOpenMap[id];
+                              setHistoryOpenMap(prev => ({ ...prev, [id]: !isOpen }));
+                              if (!isOpen && !historyMap[id]) {
+                                setHistoryLoadingMap(prev => ({ ...prev, [id]: true }));
+                                try {
+                                  const resp = await fetch(`/api/keywords/${id}/rank-history?limit=10`);
+                                  if (resp.ok) {
+                                    const data = await resp.json();
+                                    setHistoryMap(prev => ({ ...prev, [id]: data.rankHistory || data }));
+                                  } else {
+                                    setHistoryMap(prev => ({ ...prev, [id]: [] }));
+                                  }
+                                } catch (err) {
+                                  console.error('Failed to fetch rank history', err);
+                                  setHistoryMap(prev => ({ ...prev, [id]: [] }));
+                                } finally {
+                                  setHistoryLoadingMap(prev => ({ ...prev, [id]: false }));
+                                }
+                              }
+                            }}
                             style={{
-                              color: '#3b82f6',
-                              textDecoration: 'none',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              display: 'block'
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '0.25rem',
+                              backgroundColor: '#f3f4f6',
+                              border: '1px solid #e5e7eb',
+                              cursor: 'pointer'
                             }}
                           >
-                            {result.url}
-                          </a>
-                        ) : (
-                          <span style={{ color: '#6b7280' }}>-</span>
-                        )}
-                      </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center', textTransform: 'capitalize' }}>
-                        {result.searchEngine}
-                      </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.75rem', color: '#6b7280' }}>
-                        {new Date(result.checkedAt).toLocaleString()}
-                      </td>
-                    </tr>
+                            {historyOpenMap[id] ? 'Hide' : 'History'}
+                          </button>
+                        </td>
+
+                        <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                          {checkingMap[id] ? (
+                            <span style={{ color: '#6b7280' }}>Checking...</span>
+                          ) : result.error ? (
+                            <span style={{ color: '#ef4444' }}>Error</span>
+                          ) : result.position ? (
+                            <span style={{
+                              backgroundColor: result.position <= 10 ? '#dcfce7' : result.position <= 50 ? '#fef3c7' : '#fee2e2',
+                              color: result.position <= 10 ? '#166534' : result.position <= 50 ? '#92400e' : '#dc2626',
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '0.25rem',
+                              fontWeight: '500'
+                            }}>
+                              #{result.position}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#6b7280' }}>Not found</span>
+                          )}
+                        </td>
+
+                        <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                          <span style={{ 
+                            color: getRankChangeColor(result.position, keyword?.previousRank),
+                            fontSize: '1.125rem'
+                          }}>
+                            {getRankChangeIcon(result.position, keyword?.previousRank)}
+                          </span>
+                        </td>
+
+                        <td style={{ padding: '0.75rem', maxWidth: '200px' }}>
+                          {result.url ? (
+                            <a
+                              href={result.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                color: '#3b82f6',
+                                textDecoration: 'none',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                display: 'block'
+                              }}
+                            >
+                              {result.url}
+                            </a>
+                          ) : (
+                            <span style={{ color: '#6b7280' }}>-</span>
+                          )}
+                        </td>
+
+                        <td style={{ padding: '0.75rem', textAlign: 'center', textTransform: 'capitalize' }}>
+                          {result.searchEngine}
+                        </td>
+
+                        <td style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.75rem', color: '#6b7280' }}>
+                          {new Date(result.checkedAt).toLocaleString()}
+                        </td>
+                      </tr>
+
+                      {historyOpenMap[id] && (
+                        <tr key={`${id}-history`} style={{ backgroundColor: '#fafafa' }}>
+                          <td colSpan={8} style={{ padding: '0.5rem 1rem' }}>
+                            {historyLoadingMap[id] ? (
+                              <div style={{ color: '#6b7280' }}>Loading history...</div>
+                            ) : (historyMap[id] && historyMap[id].length > 0) ? (
+                              <div style={{ fontSize: '0.85rem' }}>
+                                <strong>Recent checks:</strong>
+                                <div style={{ marginTop: '0.5rem' }}>
+                                  <table style={{ width: '100%', fontSize: '0.8rem' }}>
+                                    <thead>
+                                      <tr>
+                                        <th style={{ textAlign: 'left' }}>Checked</th>
+                                        <th style={{ textAlign: 'center' }}>Position</th>
+                                        <th style={{ textAlign: 'left' }}>URL</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {historyMap[id].map((h: any, i: number) => (
+                                        <tr key={i}>
+                                          <td>{new Date(h.checkedAt).toLocaleString()}</td>
+                                          <td style={{ textAlign: 'center' }}>{h.position || '—'}</td>
+                                          <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.url || '-'}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ color: '#6b7280' }}>No history available</div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
