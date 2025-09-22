@@ -96,7 +96,8 @@ export default function BriefGenerationInterface() {
         `Meta Description: ${newBrief.metaDescription}\n` +
         `Notes: ${newBrief.notes}`;
 
-      const response = await fetch(endpoints.content.generate, {
+  const FRONTEND_OPENAI_MODEL = process.env.NEXT_PUBLIC_OPENAI_MODEL || 'gpt-5-mini';
+  const response = await fetch(endpoints.content.generate, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -104,7 +105,7 @@ export default function BriefGenerationInterface() {
         },
         body: JSON.stringify({
           prompt: prompt,
-          model: 'meta-llama/llama-3.3-70b-instruct:free',
+          model: FRONTEND_OPENAI_MODEL,
           max_tokens: 2048,
           temperature: 0.7,
         }),

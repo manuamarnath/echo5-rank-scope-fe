@@ -49,8 +49,11 @@ interface KeywordSuggestionsResponse {
 declare const process: {
   env: {
     NEXT_PUBLIC_API_BASE_URL?: string;
+    NEXT_PUBLIC_OPENAI_MODEL?: string;
   };
 };
+
+const FRONTEND_OPENAI_MODEL = process.env.NEXT_PUBLIC_OPENAI_MODEL || 'gpt-5-mini';
 
 class AIContentService {
   private baseUrl: string = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echo5-rank-scope-be.onrender.com';
@@ -72,7 +75,7 @@ class AIContentService {
         body: JSON.stringify({
           prompt: `Please produce plagiarism-free, original content. ${prompt}`,
           originality_proof: true,
-          model: 'meta-llama/llama-3.3-70b-instruct:free',
+          model: FRONTEND_OPENAI_MODEL,
           max_tokens: 1500,
           temperature: 0.7,
         }),
@@ -104,7 +107,7 @@ class AIContentService {
         body: JSON.stringify({
           prompt: `Please provide original keyword suggestions and avoid copying lists from any single source. ${prompt}`,
           originality_proof: true,
-          model: 'meta-llama/llama-3.3-70b-instruct:free',
+          model: FRONTEND_OPENAI_MODEL,
           max_tokens: 1000,
           temperature: 0.7,
         }),
@@ -154,7 +157,7 @@ class AIContentService {
         body: JSON.stringify({
           prompt: `Please produce plagiarism-free, original meta title and description. ${prompt}`,
           originality_proof: true,
-          model: 'meta-llama/llama-3.3-70b-instruct:free',
+          model: FRONTEND_OPENAI_MODEL,
           max_tokens: 300,
           temperature: 0.7,
         }),
