@@ -23,14 +23,19 @@ const nextConfig = {
     serverComponentsExternalPackages: [],
   },
   async rewrites() {
+    // Use local backend when developing so CORS and debugging are simpler.
+    const apiDestination = process.env.NODE_ENV !== 'production'
+      ? (process.env.API_BASE || 'http://localhost:5001')
+      : 'https://echo5-rank-scope-be.onrender.com';
+
     return [
       {
         source: '/api/:path*',
-        destination: `https://echo5-rank-scope-be.onrender.com/api/:path*`, // Proxy to deployed Backend
+        destination: `${apiDestination}/api/:path*`, // Proxy to backend (local in dev)
       },
       {
         source: '/health',
-  destination: `https://echo5-rank-scope-be.onrender.com/health`, // Direct health check
+        destination: `${apiDestination.replace(/\/$/,'')}/health`, // Direct health check
       },
     ];
   },
@@ -43,7 +48,8 @@ const nextConfig = {
         headers: [
           {
             key: 'Access-Control-Allow-Origin',
-            value: 'https://echo5-rank-scope-fe-e5i4.vercel.app',
+            // Allow local dev origin in development, keep strict origin in production
+            value: process.env.NODE_ENV !== 'production' ? 'http://localhost:3000' : 'https://echo5-rank-scope-fe-e5i4.vercel.app',
           },
           {
             key: 'Access-Control-Allow-Methods',
