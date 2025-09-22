@@ -31,7 +31,8 @@ import {
   Assignment,
   Analytics,
   AccountCircle,
-  ExitToApp
+  ExitToApp,
+  Security
 } from '@mui/icons-material';
 
 interface LayoutProps {
@@ -48,6 +49,7 @@ const navigationItems = [
   { href: '/briefs', label: 'Briefs', icon: Edit },
   { href: '/tasks', label: 'Tasks', icon: Assignment },
   { href: '/analytics', label: 'Analytics', icon: Analytics },
+  { href: '/audits', label: 'Site Audits', icon: Security },
 ];
 
 export default function MainLayout({ children }: LayoutProps) {
