@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Tabs, 
@@ -10,21 +10,56 @@ import {
   Button, 
   Grid,
   CircularProgress,
-  Paper
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip
 } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
+import DownloadIcon from '@mui/icons-material/Download';
+import MainLayout from '../src/components/layout/MainLayout';
 
 interface CrawlSummary {
   totalPages: number;
-  missingTitles: number;
-  missingDescriptions: number;
-  brokenLinks: number;
+  crawledPages: number;
+  errorPages: number;
   redirectPages: number;
+  averageResponseTime: number;
+  totalWordCount: number;
+  averageWordCount: number;
+  totalImages: number;
+  totalInternalLinks: number;
+  totalExternalLinks: number;
 }
 
 interface CrawlIssues {
   missingTitles: number;
   missingDescriptions: number;
+  duplicateTitles: number;
+  duplicateDescriptions: number;
+  missingH1: number;
+  multipleH1: number;
   brokenLinks: number;
+  redirectChains: number;
+  slowPages: number;
+  largePages: number;
+}
+
+interface Audit {
+  _id: string;
+  name: string;
+  baseUrl: string;
+  status: 'pending' | 'crawling' | 'completed' | 'failed';
+  summary?: CrawlSummary;
+  issues?: CrawlIssues;
+  createdAt: string;
+  endTime?: string;
+  duration?: number;
 }
 
 interface CrawlResults {
@@ -32,22 +67,50 @@ interface CrawlResults {
   summary?: CrawlSummary;
   issues?: CrawlIssues;
 }
-import {
-  Search as SearchIcon,
-  Analytics as AnalyticsIcon,
-  Download as DownloadIcon
-} from '@mui/icons-material';
-import MainLayout from '../src/components/layout/MainLayout';
 
 export default function Audits() {
-  const [activeTab, setActiveTab] = useState('crawl');
+  const [activeTab, setActiveTab] = useState('list');
   const [url, setUrl] = useState('');
   const [isCrawling, setIsCrawling] = useState(false);
   const [crawlResults, setCrawlResults] = useState<CrawlResults | null>(null);
   const [error, setError] = useState('');
+  const [audits, setAudits] = useState<Audit[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (event: React.SyntheticEvent, newValue: string) => {
     setActiveTab(newValue);
+  };
+
+  useEffect(() => {
+    if (activeTab === 'list') {
+      fetchAudits();
+    }
+  }, [activeTab]);
+
+  const fetchAudits = async () => {
+    setLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch('/api/audits', {
+        headers,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAudits(data.data || []);
+      } else {
+        console.error('Failed to fetch audits');
+      }
+    } catch (error) {
+      console.error('Error fetching audits:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCrawl = async () => {
@@ -112,6 +175,95 @@ export default function Audits() {
       setIsCrawling(false);
     }
   };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'success';
+      case 'crawling': return 'warning';
+      case 'failed': return 'error';
+      default: return 'default';
+    }
+  };
+
+  const formatDuration = (duration?: number) => {
+    if (!duration) return 'N/A';
+    const seconds = Math.floor(duration / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    if (hours > 0) return `${hours}h ${minutes % 60}m`;
+    if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+    return `${seconds}s`;
+  };
+
+  const renderAuditsList = () => (
+    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Site Audits
+          </Typography>
+          
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>URL</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Pages</TableCell>
+                    <TableCell>Issues</TableCell>
+                    <TableCell>Duration</TableCell>
+                    <TableCell>Created</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {audits.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center">
+                        <Typography variant="body2" color="text.secondary">
+                          No audits found. Create your first audit in the "Crawl & Audit" tab.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    audits.map((audit) => (
+                      <TableRow key={audit._id}>
+                        <TableCell>{audit.name}</TableCell>
+                        <TableCell>{audit.baseUrl}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={audit.status} 
+                            color={getStatusColor(audit.status) as any}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>{audit.summary?.totalPages || 0}</TableCell>
+                        <TableCell>
+                          {audit.issues ? (
+                            audit.issues.missingTitles + audit.issues.missingDescriptions + audit.issues.brokenLinks
+                          ) : 0}
+                        </TableCell>
+                        <TableCell>{formatDuration(audit.duration)}</TableCell>
+                        <TableCell>
+                          {new Date(audit.createdAt).toLocaleDateString()}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </CardContent>
+      </Card>
+    </Box>
+  );
 
   const renderCrawlTab = () => (
     <Box sx={{ maxWidth: 800, mx: 'auto' }}>
@@ -182,15 +334,15 @@ export default function Audits() {
                 <Grid container spacing={2}>
                   <Grid item xs={6} md={3}>
                     <Typography variant="body2" color="text.secondary">Missing Titles</Typography>
-                    <Typography variant="body1">{crawlResults.summary?.missingTitles || 0}</Typography>
+                    <Typography variant="body1">{crawlResults.issues?.missingTitles || 0}</Typography>
                   </Grid>
                   <Grid item xs={6} md={3}>
                     <Typography variant="body2" color="text.secondary">Missing Descriptions</Typography>
-                    <Typography variant="body1">{crawlResults.summary?.missingDescriptions || 0}</Typography>
+                    <Typography variant="body1">{crawlResults.issues?.missingDescriptions || 0}</Typography>
                   </Grid>
                   <Grid item xs={6} md={3}>
                     <Typography variant="body2" color="text.secondary">Broken Links</Typography>
-                    <Typography variant="body1">{crawlResults.summary?.brokenLinks || 0}</Typography>
+                    <Typography variant="body1">{crawlResults.issues?.brokenLinks || 0}</Typography>
                   </Grid>
                   <Grid item xs={6} md={3}>
                     <Typography variant="body2" color="text.secondary">Redirects</Typography>
@@ -205,30 +357,6 @@ export default function Audits() {
     </Box>
   );
 
-  const renderAnalysisTab = () => (
-    <Box sx={{ maxWidth: 800, mx: 'auto', textAlign: 'center', py: 8 }}>
-      <AnalyticsIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-      <Typography variant="h6" gutterBottom>
-        SEO Analysis
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        Detailed SEO analysis and recommendations will be available here after crawling a website.
-      </Typography>
-    </Box>
-  );
-
-  const renderExportTab = () => (
-    <Box sx={{ maxWidth: 800, mx: 'auto', textAlign: 'center', py: 8 }}>
-      <DownloadIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-      <Typography variant="h6" gutterBottom>
-        Export Reports
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        Export comprehensive audit reports in CSV, PDF, and other formats.
-      </Typography>
-    </Box>
-  );
-
   return (
     <MainLayout>
       <Box sx={{ px: { xs: 1, sm: 2, md: 4 }, py: 2, mt: 1 }}>
@@ -239,29 +367,22 @@ export default function Audits() {
           sx={{ mb: 3, '& .MuiTabs-indicator': { backgroundColor: 'primary.main' } }}
         >
           <Tab
+            label="My Audits"
+            value="list"
+            icon={<AnalyticsIcon />}
+            iconPosition="start"
+          />
+          <Tab
             label="Crawl & Audit"
             value="crawl"
             icon={<SearchIcon />}
             iconPosition="start"
           />
-          <Tab
-            label="SEO Analysis"
-            value="analysis"
-            icon={<AnalyticsIcon />}
-            iconPosition="start"
-          />
-          <Tab
-            label="Export"
-            value="export"
-            icon={<DownloadIcon />}
-            iconPosition="start"
-          />
         </Tabs>
 
         <Box>
+          {activeTab === 'list' && renderAuditsList()}
           {activeTab === 'crawl' && renderCrawlTab()}
-          {activeTab === 'analysis' && renderAnalysisTab()}
-          {activeTab === 'export' && renderExportTab()}
         </Box>
       </Box>
     </MainLayout>
