@@ -96,19 +96,27 @@ export default function BriefGenerationInterface() {
         `Meta Description: ${newBrief.metaDescription}\n` +
         `Notes: ${newBrief.notes}`;
 
-  const FRONTEND_OPENAI_MODEL = process.env.NEXT_PUBLIC_OPENAI_MODEL || 'gpt-5-mini';
+  const FRONTEND_OPENAI_MODEL = process.env.NEXT_PUBLIC_OPENAI_MODEL || 'gpt-4o-mini';
+  
+  // Prepare request body - only include temperature for models that support it
+  const requestBody: any = {
+    prompt: prompt,
+    model: FRONTEND_OPENAI_MODEL,
+    max_tokens: 2048,
+  };
+  
+  // Only add temperature for models that support it (most models except o1)
+  if (!FRONTEND_OPENAI_MODEL.includes('o1')) {
+    requestBody.temperature = 0.7;
+  }
+  
   const response = await fetch(endpoints.content.generate, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({
-          prompt: prompt,
-          model: FRONTEND_OPENAI_MODEL,
-          max_tokens: 2048,
-          temperature: 0.7,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) throw new Error('Content generation API error: ' + response.statusText);
@@ -523,7 +531,7 @@ export default function BriefGenerationInterface() {
                 opacity: isGenerating || !newBrief.title || !newBrief.targetKeyword ? 0.6 : 1
               }}
             >
-              {isGenerating ? 'Generating...' : '✨ Generate Content (OpenAI 3.5)'}
+              {isGenerating ? 'Generating...' : 'Generate Content ✨'}
             </button>
           </div>
 

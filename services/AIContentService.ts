@@ -53,7 +53,19 @@ declare const process: {
   };
 };
 
-const FRONTEND_OPENAI_MODEL = process.env.NEXT_PUBLIC_OPENAI_MODEL || 'gpt-5-mini';
+const FRONTEND_OPENAI_MODEL = process.env.NEXT_PUBLIC_OPENAI_MODEL || 'gpt-4o-mini';
+
+// Helper function to create request body without temperature for models that don't support it
+const createRequestBody = (baseBody: any) => {
+  const requestBody = { ...baseBody };
+  
+  // Only add temperature for models that support it (most models except o1)
+  if (!FRONTEND_OPENAI_MODEL.includes('o1')) {
+    requestBody.temperature = 0.7;
+  }
+  
+  return requestBody;
+};
 
 class AIContentService {
   private baseUrl: string = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echo5-rank-scope-be.onrender.com';
@@ -72,13 +84,12 @@ class AIContentService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({
+        body: JSON.stringify(createRequestBody({
           prompt: `Please produce plagiarism-free, original content. ${prompt}`,
           originality_proof: true,
           model: FRONTEND_OPENAI_MODEL,
           max_tokens: 1500,
-          temperature: 0.7,
-        }),
+        })),
       });
 
       if (!response.ok) {
@@ -104,13 +115,12 @@ class AIContentService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({
+        body: JSON.stringify(createRequestBody({
           prompt: `Please provide original keyword suggestions and avoid copying lists from any single source. ${prompt}`,
           originality_proof: true,
           model: FRONTEND_OPENAI_MODEL,
           max_tokens: 1000,
-          temperature: 0.7,
-        }),
+        })),
       });
 
       if (!response.ok) {
@@ -154,13 +164,12 @@ class AIContentService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({
+        body: JSON.stringify(createRequestBody({
           prompt: `Please produce plagiarism-free, original meta title and description. ${prompt}`,
           originality_proof: true,
           model: FRONTEND_OPENAI_MODEL,
           max_tokens: 300,
-          temperature: 0.7,
-        }),
+        })),
       });
 
       if (!response.ok) {

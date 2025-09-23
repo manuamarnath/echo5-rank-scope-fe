@@ -193,7 +193,7 @@ const CreateBriefForm: React.FC<CreateBriefFormProps> = ({
             opacity: (isGenerating || !newBrief.title || !newBrief.targetKeyword) ? 0.6 : 1
           }}
         >
-          {isGenerating ? 'Generating...' : '✨ Generate Content (OpenAI 3.5)'}
+          {isGenerating ? 'Generating...' : 'Generate Content ✨'}
         </button>
       </div>
     </div>
