@@ -116,7 +116,7 @@ const AuditDashboard: React.FC<AuditDashboardProps> = ({
       const params = new URLSearchParams();
       if (selectedClientId) params.append('clientId', selectedClientId);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/audits/dashboard?${params}`, {
+      const response = await fetch(`/api/audits/dashboard?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

@@ -174,7 +174,7 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/audits/${auditId}`, {
+      const response = await fetch(`/api/audits/${auditId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -209,7 +209,7 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
       if (statusCodeFilter) params.append('statusCode', statusCodeFilter);
       if (issueFilter) params.append('issueType', issueFilter);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/audits/${auditId}/pages?${params}`, {
+      const response = await fetch(`/api/audits/${auditId}/pages?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

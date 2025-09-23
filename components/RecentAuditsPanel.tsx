@@ -65,7 +65,7 @@ const RecentAuditsPanel: React.FC<RecentAuditsPanelProps> = ({
       });
       if (clientId) params.append('clientId', clientId);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/audits?${params}`, {
+      const response = await fetch(`/api/audits?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -73,11 +73,21 @@ const RecentAuditsPanel: React.FC<RecentAuditsPanelProps> = ({
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setAudits(data.data || []);
+        let data;
+        try {
+          data = await response.json();
+          setAudits(data.data || []);
+        } catch (parseError) {
+          console.error('Error parsing audits response:', parseError);
+          setAudits([]);
+        }
+      } else {
+        console.error('Error fetching audits:', response.status, response.statusText);
+        setAudits([]);
       }
     } catch (err) {
       console.error('Error fetching recent audits:', err);
+      setAudits([]);
     } finally {
       setLoading(false);
     }

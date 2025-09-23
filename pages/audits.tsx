@@ -109,7 +109,7 @@ const Audits: React.FC = () => {
         ? `${selectedClient.name} - ${new Date().toLocaleDateString()}`
         : `Audit - ${urlToAudit} - ${new Date().toLocaleDateString()}`;
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/audits`, {
+      const response = await fetch('/api/audits', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -124,11 +124,25 @@ const Audits: React.FC = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to start audit');
+        let errorMessage = 'Failed to start audit';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+          errorMessage = `Server error (${response.status})`;
+        }
+        throw new Error(errorMessage);
       }
 
-      const newAudit = await response.json();
+      let newAudit;
+      try {
+        newAudit = await response.json();
+      } catch (parseError) {
+        console.error('Error parsing success response:', parseError);
+        throw new Error('Audit may have started but response was invalid');
+      }
+      
       setSuccess('Audit started successfully!');
       setActiveAuditId(newAudit._id);
     } catch (err) {

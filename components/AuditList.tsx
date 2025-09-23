@@ -132,7 +132,7 @@ const AuditList: React.FC<AuditListProps> = ({ onViewAudit, selectedClientId }) 
       if (statusFilter) params.append('status', statusFilter);
       if (clientFilter) params.append('clientId', clientFilter);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/audits?${params}`, {
+      const response = await fetch(`/api/audits?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -187,7 +187,7 @@ const AuditList: React.FC<AuditListProps> = ({ onViewAudit, selectedClientId }) 
     
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/audits/${selectedAudit._id}`, {
+      const response = await fetch(`/api/audits/${selectedAudit._id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -210,7 +210,7 @@ const AuditList: React.FC<AuditListProps> = ({ onViewAudit, selectedClientId }) 
   const handleDownloadReport = async (auditId: string) => {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/audits/${auditId}/export`, {
+      const response = await fetch(`/api/audits/${auditId}/export`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
