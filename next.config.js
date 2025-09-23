@@ -23,10 +23,15 @@ const nextConfig = {
     serverComponentsExternalPackages: [],
   },
   async rewrites() {
-    // Use local backend when developing so CORS and debugging are simpler.
-    const apiDestination = process.env.NODE_ENV !== 'production'
-      ? (process.env.API_BASE || 'http://localhost:5001')
-      : 'https://echo5-rank-scope-be.onrender.com';
+    // In production, we use API routes (pages/api) instead of direct backend calls
+    // In development, we can optionally proxy to local backend
+    if (process.env.NODE_ENV === 'production') {
+      return []; // No rewrites in production - use API routes
+    }
+    
+    // Development only - optional proxy to local backend
+    const apiDestination = process.env.API_BASE || 'http://localhost:5001';
+    console.log('Development API destination:', apiDestination);
 
     return [
       {
