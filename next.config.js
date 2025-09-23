@@ -17,6 +17,9 @@ const nextConfig = {
     }
     return config;
   },
+  // Ensure proper routing for SPA behavior
+  trailingSlash: false,
+  generateEtags: false,
   // Configure development server
   experimental: {
     // Disable server-side rendering for API routes in development
