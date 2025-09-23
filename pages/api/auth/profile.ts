@@ -12,13 +12,17 @@ export default async function handler(req: ExtendedNextApiRequest, res: NextApiR
   }
 
   try {
-    // Temporarily hardcode backend URL for testing
-    const backendUrl = 'https://echo5-rank-scope-be.onrender.com';
+    // Use environment variable for backend URL, fallback to local
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5001';
     
     console.log('Profile endpoint: Making request to:', `${backendUrl}/api/auth/me`);
     
     // Get authorization header properly
     const authHeader = req.headers.authorization as string || '';
+    
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Authorization header required' });
+    }
     
     // Forward the request to the backend
     const response = await fetch(`${backendUrl}/api/auth/me`, {

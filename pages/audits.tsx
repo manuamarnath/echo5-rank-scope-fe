@@ -1,390 +1,319 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Tabs, 
-  Tab, 
-  Typography, 
-  Card, 
-  CardContent, 
-  TextField, 
-  Button, 
-  Grid,
-  CircularProgress,
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Alert,
+  Snackbar,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip
+  IconButton,
+  InputAdornment,
+  Chip,
+  Stack,
+  CircularProgress,
+  Tooltip,
+  Divider
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import AnalyticsIcon from '@mui/icons-material/Analytics';
-import DownloadIcon from '@mui/icons-material/Download';
+import { 
+  Search as SearchIcon,
+  PlayArrow as PlayIcon,
+  Stop as StopIcon,
+  History as HistoryIcon,
+  Settings as SettingsIcon,
+  Business as BusinessIcon
+} from '@mui/icons-material';
 import MainLayout from '../src/components/layout/MainLayout';
+import AuditViewer from '../components/AuditViewer';
+import QuickAuditSettings from '../components/QuickAuditSettings';
+import RecentAuditsPanel from '../components/RecentAuditsPanel';
 
-interface CrawlSummary {
-  totalPages: number;
-  crawledPages: number;
-  errorPages: number;
-  redirectPages: number;
-  averageResponseTime: number;
-  totalWordCount: number;
-  averageWordCount: number;
-  totalImages: number;
-  totalInternalLinks: number;
-  totalExternalLinks: number;
-}
-
-interface CrawlIssues {
-  missingTitles: number;
-  missingDescriptions: number;
-  duplicateTitles: number;
-  duplicateDescriptions: number;
-  missingH1: number;
-  multipleH1: number;
-  brokenLinks: number;
-  redirectChains: number;
-  slowPages: number;
-  largePages: number;
-}
-
-interface Audit {
+interface Client {
   _id: string;
   name: string;
-  baseUrl: string;
-  status: 'pending' | 'crawling' | 'completed' | 'failed';
-  summary?: CrawlSummary;
-  issues?: CrawlIssues;
-  createdAt: string;
-  endTime?: string;
-  duration?: number;
+  website?: string;
 }
 
-interface CrawlResults {
-  url: string;
-  summary?: CrawlSummary;
-  issues?: CrawlIssues;
-}
-
-export default function Audits() {
-  const [activeTab, setActiveTab] = useState('list');
-  const [url, setUrl] = useState('');
-  const [isCrawling, setIsCrawling] = useState(false);
-  const [crawlResults, setCrawlResults] = useState<CrawlResults | null>(null);
-  const [error, setError] = useState('');
-  const [audits, setAudits] = useState<Audit[]>([]);
+const Audits: React.FC = () => {
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [urlToAudit, setUrlToAudit] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const handleChange = (event: React.SyntheticEvent, newValue: string) => {
-    setActiveTab(newValue);
-  };
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
+  const [showRecentAudits, setShowRecentAudits] = useState(false);
+  const [activeAuditId, setActiveAuditId] = useState<string>('');
+  const [crawlSettings, setCrawlSettings] = useState({
+    maxPages: 500,
+    maxDepth: 10,
+    respectRobotsTxt: true,
+    includeSubdomains: false,
+    followRedirects: true,
+    crawlImages: true,
+    crawlCSS: false,
+    crawlJS: false,
+    userAgent: 'RankScopeBot/1.0',
+    delay: 1000,
+    timeout: 30000
+  });
 
   useEffect(() => {
-    if (activeTab === 'list') {
-      fetchAudits();
+    fetchClients();
+  }, []);
+
+  useEffect(() => {
+    // Auto-populate URL when client is selected
+    if (selectedClient?.website) {
+      setUrlToAudit(selectedClient.website);
     }
-  }, [activeTab]);
+  }, [selectedClient]);
 
-  const fetchAudits = async () => {
-    setLoading(true);
+  const fetchClients = async () => {
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const response = await fetch('/api/audits', {
-        headers,
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/clients', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.ok) {
         const data = await response.json();
-        setAudits(data.data || []);
+        setClients(data || []); // Backend returns clients array directly
       } else {
-        console.error('Failed to fetch audits');
+        console.error('Error fetching clients:', response.status, response.statusText);
       }
-    } catch (error) {
-      console.error('Error fetching audits:', error);
+    } catch (err) {
+      console.error('Error fetching clients:', err);
+    }
+  };
+
+  const handleStartAudit = async () => {
+    if (!urlToAudit) {
+      setError('Please enter a URL to audit');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const auditName = selectedClient 
+        ? `${selectedClient.name} - ${new Date().toLocaleDateString()}`
+        : `Audit - ${urlToAudit} - ${new Date().toLocaleDateString()}`;
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/audits`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: auditName,
+          baseUrl: urlToAudit.startsWith('http') ? urlToAudit : `https://${urlToAudit}`,
+          clientId: selectedClient?._id || '',
+          crawlSettings
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to start audit');
+      }
+
+      const newAudit = await response.json();
+      setSuccess('Audit started successfully!');
+      setActiveAuditId(newAudit._id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start audit');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCrawl = async () => {
-    if (!url) {
-      setError('Please enter a valid URL');
-      return;
-    }
-
-    setIsCrawling(true);
-    setError('');
-    
-    try {
-      // Add http:// if missing
-      let targetUrl = url;
-      if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
-        targetUrl = `https://${targetUrl}`;
-      }
-
-      // Include authorization token if present
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const response = await fetch('/api/audits', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ 
-          name: `Audit for ${targetUrl}`,
-          baseUrl: targetUrl,
-          crawlSettings: {
-            maxPages: 100
-          }
-        }),
-      });
-
-      // Try to parse server response (even for non-OK) to show useful messages
-      let data;
-      try {
-        data = await response.json();
-      } catch (err) {
-        data = null;
-      }
-
-      if (!response.ok) {
-        // If server returned a message, surface it; otherwise use generic message
-        const serverMessage = data?.message || data?.error || 'Crawl failed';
-        // If auth error, give actionable message
-        if (response.status === 401) {
-          setError(serverMessage || 'Authentication required. Please sign in.');
-        } else {
-          setError(serverMessage || 'Failed to crawl website. Please check the URL and try again.');
-        }
-        return;
-      }
-
-      setCrawlResults(data);
-    } catch {
-      setError('Failed to crawl website. Please check the URL and try again.');
-    } finally {
-      setIsCrawling(false);
-    }
+  const handleClientChange = (event: any) => {
+    const client = clients.find(c => c._id === event.target.value);
+    setSelectedClient(client || null);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'success';
-      case 'crawling': return 'warning';
-      case 'failed': return 'error';
-      default: return 'default';
-    }
-  };
-
-  const formatDuration = (duration?: number) => {
-    if (!duration) return 'N/A';
-    const seconds = Math.floor(duration / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    
-    if (hours > 0) return `${hours}h ${minutes % 60}m`;
-    if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
-    return `${seconds}s`;
-  };
-
-  const renderAuditsList = () => (
-    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Site Audits
-          </Typography>
-          
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>URL</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Pages</TableCell>
-                    <TableCell>Issues</TableCell>
-                    <TableCell>Duration</TableCell>
-                    <TableCell>Created</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {audits.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} align="center">
-                        <Typography variant="body2" color="text.secondary">
-                          No audits found. Create your first audit in the "Crawl & Audit" tab.
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    audits.map((audit) => (
-                      <TableRow key={audit._id}>
-                        <TableCell>{audit.name}</TableCell>
-                        <TableCell>{audit.baseUrl}</TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={audit.status} 
-                            color={getStatusColor(audit.status) as any}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>{audit.summary?.totalPages || 0}</TableCell>
-                        <TableCell>
-                          {audit.issues ? (
-                            audit.issues.missingTitles + audit.issues.missingDescriptions + audit.issues.brokenLinks
-                          ) : 0}
-                        </TableCell>
-                        <TableCell>{formatDuration(audit.duration)}</TableCell>
-                        <TableCell>
-                          {new Date(audit.createdAt).toLocaleDateString()}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </CardContent>
-      </Card>
-    </Box>
-  );
-
-  const renderCrawlTab = () => (
-    <Box sx={{ maxWidth: 800, mx: 'auto' }}>
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Website Crawl & Audit
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Enter a website URL to perform a comprehensive SEO audit. The crawler will analyze meta tags, 
-            headings, links, and other SEO factors.
-          </Typography>
-          
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-            <TextField
-              fullWidth
-              label="Website URL"
-              placeholder="example.com"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              error={!!error}
-              helperText={error}
-              disabled={isCrawling}
-            />
-            <Button
-              variant="contained"
-              onClick={handleCrawl}
-              disabled={isCrawling}
-              startIcon={isCrawling ? <CircularProgress size={20} /> : <SearchIcon />}
-              sx={{ minWidth: 120, height: 56 }}
-            >
-              {isCrawling ? 'Crawling...' : 'Start Audit'}
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {crawlResults && (
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Audit Results for {crawlResults.url}
-            </Typography>
-            
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <Paper sx={{ p: 2, bgcolor: 'success.light', color: 'success.dark' }}>
-                  <Typography variant="h4">{crawlResults.summary?.totalPages || 0}</Typography>
-                  <Typography variant="body2">Pages Crawled</Typography>
-                </Paper>
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <Paper sx={{ p: 2, bgcolor: 'info.light', color: 'info.dark' }}>
-                  <Typography variant="h4">
-                    {(crawlResults.issues?.missingTitles || 0) + 
-                     (crawlResults.issues?.missingDescriptions || 0) + 
-                     (crawlResults.issues?.brokenLinks || 0)}
-                  </Typography>
-                  <Typography variant="body2">SEO Issues Found</Typography>
-                </Paper>
-              </Grid>
-
-              <Grid item xs={12}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Quick Stats
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={6} md={3}>
-                    <Typography variant="body2" color="text.secondary">Missing Titles</Typography>
-                    <Typography variant="body1">{crawlResults.issues?.missingTitles || 0}</Typography>
-                  </Grid>
-                  <Grid item xs={6} md={3}>
-                    <Typography variant="body2" color="text.secondary">Missing Descriptions</Typography>
-                    <Typography variant="body1">{crawlResults.issues?.missingDescriptions || 0}</Typography>
-                  </Grid>
-                  <Grid item xs={6} md={3}>
-                    <Typography variant="body2" color="text.secondary">Broken Links</Typography>
-                    <Typography variant="body1">{crawlResults.issues?.brokenLinks || 0}</Typography>
-                  </Grid>
-                  <Grid item xs={6} md={3}>
-                    <Typography variant="body2" color="text.secondary">Redirects</Typography>
-                    <Typography variant="body1">{crawlResults.summary?.redirectPages || 0}</Typography>
-                  </Grid>
-                </Grid>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      )}
-    </Box>
-  );
+  if (activeAuditId) {
+    return (
+      <MainLayout>
+        <AuditViewer 
+          auditId={activeAuditId} 
+          onClose={() => setActiveAuditId('')}
+        />
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
-      <Box sx={{ px: { xs: 1, sm: 2, md: 4 }, py: 2, mt: 1 }}>
-        <Tabs
-          value={activeTab}
-          onChange={handleChange}
-          centered
-          sx={{ mb: 3, '& .MuiTabs-indicator': { backgroundColor: 'primary.main' } }}
-        >
-          <Tab
-            label="My Audits"
-            value="list"
-            icon={<AnalyticsIcon />}
-            iconPosition="start"
-          />
-          <Tab
-            label="Crawl & Audit"
-            value="crawl"
-            icon={<SearchIcon />}
-            iconPosition="start"
-          />
-        </Tabs>
-
-        <Box>
-          {activeTab === 'list' && renderAuditsList()}
-          {activeTab === 'crawl' && renderCrawlTab()}
+      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
+        {/* Header */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" gutterBottom>
+            SEO Site Audit
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Select a client and start crawling their website for SEO analysis
+          </Typography>
         </Box>
+
+        {/* Main Control Panel */}
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Stack spacing={3}>
+            {/* Client Selection */}
+            <FormControl fullWidth>
+              <InputLabel id="client-select-label">
+                <BusinessIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                Select Client
+              </InputLabel>
+              <Select
+                labelId="client-select-label"
+                value={selectedClient?._id || ''}
+                label="Select Client"
+                onChange={handleClientChange}
+              >
+                <MenuItem value="">
+                  <em>No Client (Quick Audit)</em>
+                </MenuItem>
+                {clients.map((client) => (
+                  <MenuItem key={client._id} value={client._id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                      <Box sx={{ flexGrow: 1 }}>
+                        <Typography>{client.name}</Typography>
+                        {client.website && (
+                          <Typography variant="caption" color="text.secondary">
+                            {client.website}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* URL Input */}
+            <TextField
+              fullWidth
+              label="URL to Audit"
+              placeholder="https://example.com"
+              value={urlToAudit}
+              onChange={(e) => setUrlToAudit(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+              helperText={selectedClient ? `Auditing for ${selectedClient.name}` : 'Enter the website URL to crawl'}
+            />
+
+            {/* Quick Settings Display */}
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Chip label={`Max ${crawlSettings.maxPages} pages`} size="small" />
+              <Chip label={`Depth ${crawlSettings.maxDepth}`} size="small" />
+              <Chip label={`${crawlSettings.delay}ms delay`} size="small" />
+              {crawlSettings.respectRobotsTxt && <Chip label="Respects robots.txt" size="small" color="primary" />}
+              {crawlSettings.crawlImages && <Chip label="Images" size="small" color="secondary" />}
+            </Box>
+
+            <Divider />
+
+            {/* Action Buttons */}
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Button
+                variant="contained"
+                color="primary"
+                size="large"
+                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <PlayIcon />}
+                onClick={handleStartAudit}
+                disabled={loading || !urlToAudit}
+                sx={{ minWidth: 150 }}
+              >
+                {loading ? 'Starting...' : 'Start Audit'}
+              </Button>
+
+              <Tooltip title="Audit Settings">
+                <IconButton 
+                  onClick={() => setShowSettings(!showSettings)}
+                  color={showSettings ? 'primary' : 'default'}
+                >
+                  <SettingsIcon />
+                </IconButton>
+              </Tooltip>
+
+              <Tooltip title="Recent Audits">
+                <IconButton 
+                  onClick={() => setShowRecentAudits(!showRecentAudits)}
+                  color={showRecentAudits ? 'primary' : 'default'}
+                >
+                  <HistoryIcon />
+                </IconButton>
+              </Tooltip>
+
+              <Box sx={{ flexGrow: 1 }} />
+
+              {selectedClient && (
+                <Typography variant="body2" color="text.secondary">
+                  Client: <strong>{selectedClient.name}</strong>
+                </Typography>
+              )}
+            </Box>
+          </Stack>
+        </Paper>
+
+        {/* Settings Panel */}
+        {showSettings && (
+          <QuickAuditSettings
+            settings={crawlSettings}
+            onChange={setCrawlSettings}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
+
+        {/* Recent Audits Panel */}
+        {showRecentAudits && (
+          <RecentAuditsPanel
+            clientId={selectedClient?._id}
+            onSelectAudit={(auditId) => setActiveAuditId(auditId)}
+            onClose={() => setShowRecentAudits(false)}
+          />
+        )}
+
+        {/* Messages */}
+        <Snackbar
+          open={!!success}
+          autoHideDuration={6000}
+          onClose={() => setSuccess('')}
+        >
+          <Alert onClose={() => setSuccess('')} severity="success">
+            {success}
+          </Alert>
+        </Snackbar>
+
+        <Snackbar
+          open={!!error}
+          autoHideDuration={6000}
+          onClose={() => setError('')}
+        >
+          <Alert onClose={() => setError('')} severity="error">
+            {error}
+          </Alert>
+        </Snackbar>
       </Box>
     </MainLayout>
   );
-}
+};
+
+export default Audits;

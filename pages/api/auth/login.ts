@@ -11,8 +11,8 @@ export default async function handler(req: ExtendedNextApiRequest, res: NextApiR
   }
 
   try {
-  // Use environment variable when available, fallback to deployed backend
-  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://echo5-rank-scope-be.onrender.com';
+  // Use environment variable for backend URL, fallback to local
+  const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';
     
     // Forward the request to the backend
     const targetUrl = `${backendUrl}/api/auth/login`;
