@@ -156,7 +156,7 @@ const AuditList: React.FC<AuditListProps> = ({ onViewAudit, selectedClientId }) 
   const fetchClients = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clients`, {
+      const response = await fetch('/api/clients', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
