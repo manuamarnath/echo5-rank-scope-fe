@@ -25,6 +25,12 @@ interface PrimaryKeywordData {
   notes?: string;
 }
 
+interface SecondaryKeywordData {
+  keyword: string;
+  targetLocation?: string;
+  notes?: string;
+}
+
 interface ClientFormData {
   name: string;
   industry: string;
@@ -33,6 +39,7 @@ interface ClientFormData {
   services: string[];
   competitors: string[];
   primaryKeywords: PrimaryKeywordData[];
+  secondaryKeywords: SecondaryKeywordData[];
   seedKeywords: KeywordData[];
   integrations: {
     googleSearchConsole: boolean;
@@ -44,11 +51,13 @@ interface ClientFormData {
 interface ClientOnboardingFormProps {
   onComplete: (data: ClientFormData) => void;
   onCancel: () => void;
+  initialData?: ClientFormData;
+  isEditing?: boolean;
 }
 
-export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnboardingFormProps) {
+export default function ClientOnboardingForm({ onComplete, onCancel, initialData, isEditing = false }: ClientOnboardingFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<ClientFormData>({
+  const [formData, setFormData] = useState<ClientFormData>(initialData || {
     name: '',
     industry: '',
     website: '',
@@ -68,6 +77,11 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
       targetLocation: '',
       notes: ''
     }],
+    secondaryKeywords: [{
+      keyword: '',
+      targetLocation: '',
+      notes: ''
+    }],
     seedKeywords: [],
     integrations: {
       googleSearchConsole: false,
@@ -76,9 +90,9 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
     }
   });
 
-  const totalSteps = 7;
+  const totalSteps = 8;
 
-  const updateFormData = (field: keyof ClientFormData, value: string | LocationData[] | string[] | PrimaryKeywordData[] | KeywordData[] | { googleSearchConsole: boolean; googleAnalytics: boolean; googleBusinessProfile: boolean }) => {
+  const updateFormData = (field: keyof ClientFormData, value: string | LocationData[] | string[] | PrimaryKeywordData[] | SecondaryKeywordData[] | KeywordData[] | { googleSearchConsole: boolean; googleAnalytics: boolean; googleBusinessProfile: boolean }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -159,6 +173,33 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
     }));
   };
 
+  const addSecondaryKeyword = () => {
+    setFormData(prev => ({
+      ...prev,
+      secondaryKeywords: [...prev.secondaryKeywords, {
+        keyword: '',
+        targetLocation: '',
+        notes: ''
+      }]
+    }));
+  };
+
+  const updateSecondaryKeyword = (index: number, field: keyof SecondaryKeywordData, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      secondaryKeywords: prev.secondaryKeywords.map((item, i) => 
+        i === index ? { ...item, [field]: value } : item
+      )
+    }));
+  };
+
+  const removeSecondaryKeyword = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      secondaryKeywords: prev.secondaryKeywords.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleKeywordsImported = (keywords: KeywordData[]) => {
     setFormData(prev => ({
       ...prev,
@@ -187,6 +228,7 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
       services: formData.services.filter(item => item.trim()),
       competitors: formData.competitors.filter(item => item.trim()),
       primaryKeywords: formData.primaryKeywords.filter(item => item.keyword.trim()),
+      secondaryKeywords: formData.secondaryKeywords.filter(item => item.keyword.trim()),
       seedKeywords: formData.seedKeywords, // Keep all imported keywords
     };
     onComplete(cleanedData);
@@ -712,6 +754,144 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
         return (
           <div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
+              Secondary Keywords
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
+              Add secondary keywords that support your primary keywords. These are terms that are related to your main keywords and can help broaden your SEO reach.
+            </p>
+            
+            {formData.secondaryKeywords.map((secondaryKeyword, index) => (
+              <div key={index} style={{ 
+                border: '1px solid #d1d5db', 
+                borderRadius: '0.5rem', 
+                padding: '1rem', 
+                marginBottom: '1rem',
+                backgroundColor: '#f9fafb'
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                      Secondary Keyword *
+                    </label>
+                    <input
+                      type="text"
+                      value={secondaryKeyword.keyword}
+                      onChange={(e) => updateSecondaryKeyword(index, 'keyword', e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.5rem', 
+                        border: '1px solid #d1d5db', 
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem'
+                      }}
+                      placeholder="Enter secondary keyword"
+                      required
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                      Target Location (Optional)
+                    </label>
+                    <select
+                      value={secondaryKeyword.targetLocation}
+                      onChange={(e) => updateSecondaryKeyword(index, 'targetLocation', e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.5rem', 
+                        border: '1px solid #d1d5db', 
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      <option value="">All locations</option>
+                      {formData.locations.map((location, locIndex) => (
+                        <option key={locIndex} value={location.city}>
+                          {location.city}{location.state ? `, ${location.state}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'end', gap: '0.5rem' }}>
+                    {formData.secondaryKeywords.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeSecondaryKeyword(index)}
+                        style={{ 
+                          padding: '0.5rem', 
+                          backgroundColor: '#ef4444', 
+                          color: 'white', 
+                          border: 'none', 
+                          borderRadius: '0.375rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div style={{ marginTop: '0.75rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                    Notes (Optional)
+                  </label>
+                  <textarea
+                    value={secondaryKeyword.notes}
+                    onChange={(e) => updateSecondaryKeyword(index, 'notes', e.target.value)}
+                    rows={2}
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.5rem', 
+                      border: '1px solid #d1d5db', 
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                      resize: 'vertical'
+                    }}
+                    placeholder="Any specific notes about this keyword..."
+                  />
+                </div>
+              </div>
+            ))}
+            
+            <button
+              type="button"
+              onClick={addSecondaryKeyword}
+              style={{ 
+                padding: '0.5rem 1rem', 
+                backgroundColor: '#10b981', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '0.375rem',
+                cursor: 'pointer',
+                fontSize: '0.875rem'
+              }}
+            >
+              Add Secondary Keyword
+            </button>
+            
+            {formData.secondaryKeywords.length === 0 && (
+              <div style={{
+                backgroundColor: '#eff6ff',
+                border: '1px solid #3b82f6',
+                borderRadius: '0.375rem',
+                padding: '1rem',
+                marginTop: '1rem'
+              }}>
+                <p style={{ fontSize: '0.875rem', color: '#1e40af', margin: 0 }}>
+                  💡 <strong>Optional:</strong> Secondary keywords help support your primary keywords and can capture additional search traffic. 
+                  Consider adding variations, related terms, or longer phrases that complement your primary keywords.
+                </p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 7:
+        return (
+          <div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
               Seed Keywords
             </h3>
             <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
@@ -785,7 +965,7 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
           </div>
         );
 
-      case 7:
+      case 8:
         return (
           <div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
@@ -850,8 +1030,10 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
       case 5:
         return true; // Primary keywords are optional but recommended
       case 6:
-        return true; // Seed keywords are optional but recommended
+        return true; // Secondary keywords are optional
       case 7:
+        return true; // Seed keywords are optional but recommended
+      case 8:
         return true; // Integrations are optional
       default:
         return false;
@@ -878,7 +1060,7 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
             fontWeight: 'bold', 
             marginBottom: '0.5rem' 
           }}>
-            Client Onboarding
+            {isEditing ? 'Edit Client' : 'Client Onboarding'}
           </h2>
           <div style={{ 
             display: 'flex', 
@@ -973,7 +1155,7 @@ export default function ClientOnboardingForm({ onComplete, onCancel }: ClientOnb
                   cursor: 'pointer'
                 }}
               >
-                Complete Onboarding
+                {isEditing ? 'Update Client' : 'Complete Onboarding'}
               </button>
             )}
           </div>

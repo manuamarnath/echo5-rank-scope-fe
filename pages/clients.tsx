@@ -26,7 +26,8 @@ interface ClientFormData {
   services: string[];
   competitors: string[];
   primaryKeywords: Array<{keyword: string; priority: number; targetLocation?: string; notes?: string}>;
-  seedKeywords: Array<{keyword: string; searchVolume?: number; difficulty?: number; intent?: string; source: string}>;
+  secondaryKeywords: Array<{keyword: string; targetLocation?: string; notes?: string}>;
+  seedKeywords: Array<{keyword: string; searchVolume?: number; difficulty?: number; intent?: 'informational' | 'transactional' | 'navigational' | 'local'; source: 'csv' | 'gsc' | 'manual'}>;
   integrations: {
     googleSearchConsole: boolean;
     googleAnalytics: boolean;
@@ -52,6 +53,7 @@ interface BackendClient {
 export default function ClientsPage() {
   const { user } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -136,11 +138,131 @@ export default function ClientsPage() {
     }
   };
 
+  const handleClientUpdate = async (clientData: ClientFormData) => {
+    if (!editingClient) return;
+
+    try {
+      console.log('Updating client data:', clientData);
+      
+      // Call backend API to update client
+      const response = await fetch(`/api/clients/demo/${editingClient.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(clientData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update client');
+      }
+
+      const updatedClient: BackendClient = await response.json();
+      console.log('Client updated successfully:', updatedClient);
+
+      // Update local state
+      const formattedClient: Client = {
+        id: updatedClient._id,
+        name: updatedClient.name,
+        industry: updatedClient.industry,
+        locations: updatedClient.locations?.map((loc: {city: string; state: string}) => `${loc.city}, ${loc.state}`) || [],
+        services: updatedClient.services || [],
+        competitors: updatedClient.competitors || [],
+        integrations: updatedClient.integrations || {
+          googleSearchConsole: false,
+          googleAnalytics: false,
+          googleBusinessProfile: false,
+        },
+        createdAt: updatedClient.createdAt || new Date().toISOString()
+      };
+      
+      setClients(prev => prev.map(client => 
+        client.id === editingClient.id ? formattedClient : client
+      ));
+      setEditingClient(null);
+      
+      alert('Client updated successfully!');
+    } catch (error) {
+      console.error('Failed to update client:', error);
+      alert(`Failed to update client: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleClientDelete = async (clientId: string) => {
+    if (!confirm('Are you sure you want to delete this client? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      console.log('Deleting client:', clientId);
+      
+      // Call backend API to delete client
+      const response = await fetch(`/api/clients/demo/${clientId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete client');
+      }
+
+      console.log('Client deleted successfully');
+
+      // Remove from local state
+      setClients(prev => prev.filter(client => client.id !== clientId));
+      
+      alert('Client deleted successfully!');
+    } catch (error) {
+      console.error('Failed to delete client:', error);
+      alert(`Failed to delete client: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleEditClient = (client: Client) => {
+    setEditingClient(client);
+  };
+
   if (showOnboarding) {
     return (
       <ClientOnboardingForm
         onComplete={handleClientComplete}
         onCancel={() => setShowOnboarding(false)}
+      />
+    );
+  }
+
+  if (editingClient) {
+    // Convert client data to form format for editing
+    const clientFormData: ClientFormData = {
+      name: editingClient.name,
+      industry: editingClient.industry,
+      website: '', // We don't store website in the current client model
+      locations: editingClient.locations.map(loc => {
+        const [city, state] = loc.split(', ');
+        return {
+          city: city || '',
+          state: state || '',
+          country: '',
+          zip: '',
+          radius: 25,
+          radiusUnit: 'miles' as const
+        };
+      }),
+      services: editingClient.services,
+      competitors: editingClient.competitors,
+      primaryKeywords: [], // We'd need to fetch these from the keywords table
+      secondaryKeywords: [], // We'd need to fetch these from the keywords table
+      seedKeywords: [], // We'd need to fetch these from the keywords table
+      integrations: editingClient.integrations
+    };
+
+    return (
+      <ClientOnboardingForm
+        initialData={clientFormData}
+        onComplete={handleClientUpdate}
+        onCancel={() => setEditingClient(null)}
+        isEditing={true}
       />
     );
   }
@@ -350,20 +472,40 @@ export default function ClientsPage() {
                   >
                     View Details
                   </button>
-                  <button
-                    style={{ 
-                      flex: 1,
-                      padding: '0.5rem', 
-                      backgroundColor: '#4f46e5', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '0.375rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem'
-                    }}
-                  >
-                    Manage
-                  </button>
+                  {user?.role === 'owner' && (
+                    <>
+                      <button
+                        onClick={() => handleEditClient(client)}
+                        style={{ 
+                          flex: 1,
+                          padding: '0.5rem', 
+                          backgroundColor: '#4f46e5', 
+                          color: 'white', 
+                          border: 'none', 
+                          borderRadius: '0.375rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleClientDelete(client.id)}
+                        style={{ 
+                          flex: 1,
+                          padding: '0.5rem', 
+                          backgroundColor: '#dc2626', 
+                          color: 'white', 
+                          border: 'none', 
+                          borderRadius: '0.375rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
