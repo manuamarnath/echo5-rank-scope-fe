@@ -7,3 +7,4 @@ node_modules
 .env
 playwright.config.ts
 .grok
+.env.production

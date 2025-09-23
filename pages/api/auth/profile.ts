@@ -12,8 +12,10 @@ export default async function handler(req: ExtendedNextApiRequest, res: NextApiR
   }
 
   try {
-    // Use environment variable for backend URL, fallback to local
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5001';
+    // Use environment variable for backend URL, with proper fallbacks for production
+    const backendUrl = process.env.BACKEND_URL || 
+                      process.env.NEXT_PUBLIC_API_BASE_URL || 
+                      'https://echo5-rank-scope-be.onrender.com';
     
     console.log('Profile endpoint: Making request to:', `${backendUrl}/api/auth/me`);
     
@@ -36,6 +38,7 @@ export default async function handler(req: ExtendedNextApiRequest, res: NextApiR
     const data = await response.json();
     
     if (!response.ok) {
+      console.error('Backend responded with error:', response.status, data);
       return res.status(response.status).json(data);
     }
 

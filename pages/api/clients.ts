@@ -6,7 +6,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5001';
+    const backendUrl = process.env.BACKEND_URL || 
+                      process.env.NEXT_PUBLIC_API_BASE_URL || 
+                      'https://echo5-rank-scope-be.onrender.com';
     
     // Get authorization header from the request
     const authHeader = req.headers.authorization;
@@ -14,6 +16,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!authHeader) {
       return res.status(401).json({ error: 'Authorization header required' });
     }
+
+    console.log('Clients API: forwarding to', `${backendUrl}/api/clients`);
 
     // Forward the request to the backend
     const response = await fetch(`${backendUrl}/api/clients`, {
@@ -27,6 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const data = await response.json();
     
     if (!response.ok) {
+      console.error('Backend clients error:', response.status, data);
       return res.status(response.status).json(data);
     }
 
