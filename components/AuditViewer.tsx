@@ -18,6 +18,7 @@ import {
   InputAdornment,
   InputLabel,
   LinearProgress,
+  CircularProgress,
   List,
   ListItem,
   ListItemText,
@@ -158,63 +159,73 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
   const [selectedStatusCode, setSelectedStatusCode] = useState('');
 
   // PageSpeed (local Lighthouse)
-  const [psiUrl, setPsiUrl] = useState('');
   const [psiLoading, setPsiLoading] = useState(false);
   const [psiMobile, setPsiMobile] = useState<any>(null);
   const [psiDesktop, setPsiDesktop] = useState<any>(null);
 
   // Fetch audit
+  const loadAudit = async () => {
+    try {
+      if (!auditId) return;
+      setError('');
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`/api/audits/${auditId}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error(`Failed to fetch audit (${res.status})`);
+      const data = await res.json();
+      setAudit(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const run = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        const token = localStorage.getItem('auth_token');
-        const res = await fetch(`/api/audits/${auditId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(`Failed to fetch audit (${res.status})`);
-        const data = await res.json();
-        setAudit(data);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load');
-      } finally {
-        setLoading(false);
-      }
-    };
-    run();
+    setLoading(true);
+    loadAudit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auditId]);
 
   // Fetch pages list
+  const loadPages = async () => {
+    if (!auditId) return;
+    try {
+      setPagesLoading(true);
+      const token = localStorage.getItem('auth_token');
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      if (statusCodeFilter) params.set('status', statusCodeFilter);
+      if (issueFilter) params.set('issue', issueFilter);
+      if (sortBy) params.set('sortBy', sortBy);
+      params.set('page', String(page + 1));
+      params.set('limit', String(rowsPerPage));
+      const res = await fetch(`/api/audits/${auditId}/pages?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error(`Failed to fetch pages (${res.status})`);
+      const data = await res.json();
+      setPages(data.pages || []);
+      setTotalCount(data.total || (data.pages?.length ?? 0));
+    } catch (e) {
+      setError((e as Error)?.message || 'Failed to load pages');
+    } finally {
+      setPagesLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const run = async () => {
-      if (!auditId) return;
-      try {
-        setPagesLoading(true);
-        const token = localStorage.getItem('auth_token');
-        const params = new URLSearchParams();
-        if (search) params.set('search', search);
-        if (statusCodeFilter) params.set('status', statusCodeFilter);
-        if (issueFilter) params.set('issue', issueFilter);
-        if (sortBy) params.set('sortBy', sortBy);
-        params.set('page', String(page + 1));
-        params.set('limit', String(rowsPerPage));
-        const res = await fetch(`/api/audits/${auditId}/pages?${params.toString()}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(`Failed to fetch pages (${res.status})`);
-        const data = await res.json();
-        setPages(data.pages || []);
-        setTotalCount(data.total || (data.pages?.length ?? 0));
-      } catch (e) {
-        // Keep UX resilient; show table empty and message on header
-        setError((e as Error)?.message || 'Failed to load pages');
-      } finally {
-        setPagesLoading(false);
-      }
-    };
-    run();
+    loadPages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auditId, search, statusCodeFilter, issueFilter, sortBy, page, rowsPerPage]);
+
+  // Poll while crawling
+  useEffect(() => {
+    if (!audit || audit.status === 'completed') return;
+    const id = setInterval(() => {
+      loadAudit();
+      loadPages();
+    }, 5000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audit?.status, search, statusCodeFilter, issueFilter, sortBy, page, rowsPerPage]);
 
   const getStatusColor = (statusCode: number) => {
     if (statusCode >= 200 && statusCode < 300) return 'success' as const;
@@ -598,7 +609,20 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 3, pb: 0 }}>
         <Typography variant="h4">{audit?.name}</Typography>
-        <Button onClick={onClose}>Back to List</Button>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {audit?.status && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip size="small" label={audit.status} color={audit.status === 'completed' ? 'success' : 'info'} />
+              {audit.status !== 'completed' && (
+                <>
+                  <CircularProgress size={16} />
+                  <Typography variant="caption" color="text.secondary">Crawling… auto-refreshing</Typography>
+                </>
+              )}
+            </Box>
+          )}
+          <Button onClick={onClose}>Back to List</Button>
+        </Box>
       </Box>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={activeTab} onChange={handleTabChange}>
@@ -632,14 +656,16 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
       )}
       {activeTab === 9 && (
         <Box sx={{ p: 3 }}>
-          <Typography sx={{ mb: 2 }}>Run Lighthouse (local) for a specific URL from this audit. This avoids PageSpeed Insights rate limits. We’ll run both Mobile and Desktop.</Typography>
+          <Typography sx={{ mb: 1 }}>Run Lighthouse (local) for this audit’s site. We’ll run both Mobile and Desktop.</Typography>
+          <Typography variant="body2" color={audit?.baseUrl ? 'text.secondary' : 'error.main'} sx={{ mb: 2 }}>
+            {audit?.baseUrl ? `Using base URL: ${audit.baseUrl}` : 'No base URL found for this audit. Set a base URL to run Lighthouse.'}
+          </Typography>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
-            <TextField label="URL" placeholder={audit?.baseUrl} value={psiUrl} onChange={(e) => setPsiUrl(e.target.value)} size="small" sx={{ minWidth: 420 }} />
-            <Button variant="contained" disabled={psiLoading} onClick={async () => {
+            <Button variant="contained" disabled={psiLoading || !audit?.baseUrl} onClick={async () => {
               try {
                 setPsiLoading(true); setError(''); setPsiMobile(null); setPsiDesktop(null);
                 const token = localStorage.getItem('auth_token');
-                const u = psiUrl || audit?.baseUrl || '';
+                const u = audit?.baseUrl || '';
                 if (!u) throw new Error('Missing URL');
                 const respMob = await fetch(`/api/pagespeed-local/lighthouse?url=${encodeURIComponent(u)}&strategy=mobile`, { headers: { Authorization: `Bearer ${token}` } });
                 if (!respMob.ok) throw new Error(`Lighthouse mobile failed (${respMob.status})`);
