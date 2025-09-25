@@ -375,6 +375,20 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
   const headingNoneCount = useMemo(() => headingRows.filter(r => r.count === 0).length, [headingRows]);
   const headingMultiCount = useMemo(() => headingLevel === 'h1' ? headingRows.filter(r => r.count > 1).length : 0, [headingRows, headingLevel]);
 
+  // Counts for tab labels
+  const pagesCount = useMemo(() => (audit?.summary?.crawledPages ?? allPages.length ?? 0), [audit?.summary?.crawledPages, allPages.length]);
+  const internalLinksCount = internalLinksFlat.length;
+  const externalLinksCount = externalLinksFlat.length;
+  const imagesCount = imagesFlat.length;
+  const responseCodesCount = allPages.length;
+  const titlesCount = titleRows.length;
+  const metaCount = metaRows.length;
+  const headingsCount = headingRows.length;
+  const canonicalRobotsCount = canonicalRobotsRows.length;
+  const brokenLinksCount = brokenInternalRows.length;
+  const duplicatesCount = (duplicateClusters.title.length + duplicateClusters.meta.length + duplicateClusters.h1.length);
+  const pageSpeedCount = (psiMobile ? 1 : 0) + (psiDesktop ? 1 : 0);
+
   if (loading) {
     return (
       <Box sx={{ p: 3 }}>
@@ -729,19 +743,19 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
       </Box>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={activeTab} onChange={handleTabChange}>
-          <Tab label="Overview" />
-          <Tab label={`Pages (${audit?.summary?.crawledPages || 0})`} />
-          <Tab label="Internal Links" />
-          <Tab label="External Links" />
-          <Tab label="Images" />
-          <Tab label="Response Codes" />
-          <Tab label="Page Titles" />
-          <Tab label="Meta Descriptions" />
-          <Tab label="Headings" />
-          <Tab label="Canonical & Robots" />
-          <Tab label="Broken Links" />
-          <Tab label="Duplicates" />
-          <Tab label="PageSpeed" />
+          <Tab label={`Overview`} />
+          <Tab label={`Pages (${pagesCount})`} />
+          <Tab label={`Internal Links (${internalLinksCount})`} />
+          <Tab label={`External Links (${externalLinksCount})`} />
+          <Tab label={`Images (${imagesCount})`} />
+          <Tab label={`Response Codes (${responseCodesCount})`} />
+          <Tab label={`Page Titles (${titlesCount})`} />
+          <Tab label={`Meta Descriptions (${metaCount})`} />
+          <Tab label={`Headings (${headingsCount})`} />
+          <Tab label={`Canonical & Robots (${canonicalRobotsCount})`} />
+          <Tab label={`Broken Links (${brokenLinksCount})`} />
+          <Tab label={`Duplicates (${duplicatesCount})`} />
+          <Tab label={`PageSpeed (${pageSpeedCount})`} />
         </Tabs>
       </Box>
       {error && audit && (
