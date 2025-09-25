@@ -58,6 +58,11 @@ interface AuditPage {
   metaDescription: string;
   metaDescriptionLength?: number;
   h1: string[];
+  h2?: string[];
+  h3?: string[];
+  h4?: string[];
+  h5?: string[];
+  h6?: string[];
   wordCount: number;
   responseTime: number;
   contentLength: number;
@@ -156,6 +161,8 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
   const [imagesSearch, setImagesSearch] = useState('');
   const [titleSearch, setTitleSearch] = useState('');
   const [metaSearch, setMetaSearch] = useState('');
+  const [h1Search, setH1Search] = useState('');
+  const [headingLevel, setHeadingLevel] = useState<'h1'|'h2'|'h3'|'h4'|'h5'|'h6'>('h1');
   const [selectedStatusCode, setSelectedStatusCode] = useState('');
 
   // PageSpeed (local Lighthouse)
@@ -194,16 +201,26 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
       const token = localStorage.getItem('auth_token');
       const params = new URLSearchParams();
       if (search) params.set('search', search);
-      if (statusCodeFilter) params.set('status', statusCodeFilter);
-      if (issueFilter) params.set('issue', issueFilter);
+      if (statusCodeFilter) {
+        const parts = statusCodeFilter.split(',').map(s => s.trim()).filter(Boolean);
+        if (parts.length > 1) {
+          parts.forEach(c => params.append('statusCode', c));
+        } else {
+          params.set('statusCode', statusCodeFilter);
+        }
+      }
+      if (issueFilter) params.set('issueType', issueFilter);
       if (sortBy) params.set('sortBy', sortBy);
       params.set('page', String(page + 1));
       params.set('limit', String(rowsPerPage));
       const res = await fetch(`/api/audits/${auditId}/pages?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error(`Failed to fetch pages (${res.status})`);
       const data = await res.json();
-      setPages(data.pages || []);
-      setTotalCount(data.total || (data.pages?.length ?? 0));
+      // Backend returns { data: [...], pagination: { total } }
+      const pagesData: AuditPage[] = data.pages || data.data || [];
+      const total = (data.pagination?.total ?? data.total ?? pagesData.length) as number;
+      setPages(pagesData);
+      setTotalCount(total);
     } catch (e) {
       setError((e as Error)?.message || 'Failed to load pages');
     } finally {
@@ -266,6 +283,73 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
   const internalLinksFlat = useMemo(() => allPages.flatMap(p => (p.internalLinks || []).map(l => ({ from: p.url, to: l.url, anchorText: l.anchorText, nofollow: l.nofollow }))), [allPages]);
   const externalLinksFlat = useMemo(() => allPages.flatMap(p => (p.externalLinks || []).map(l => ({ from: p.url, to: l.url, anchorText: l.anchorText, nofollow: l.nofollow }))), [allPages]);
   const imagesFlat = useMemo(() => allPages.flatMap(p => (p.images || []).map(img => ({ page: p.url, src: img.src, alt: img.alt, width: img.width, height: img.height, altMissing: !img.alt }))), [allPages]);
+  const pageMap = useMemo(() => {
+    const m = new Map<string, AuditPage>();
+    allPages.forEach(p => m.set(p.url, p));
+    return m;
+  }, [allPages]);
+  const errorUrlSet = useMemo(() => new Set(allPages.filter(p => (p.statusCode || 0) >= 400).map(p => p.url)), [allPages]);
+  const brokenInternalRows = useMemo(() => {
+    const rows: { from: string; to: string; anchorText: string; status: number }[] = [];
+    for (const p of allPages) {
+      for (const l of p.internalLinks || []) {
+        if (errorUrlSet.has(l.url)) {
+          rows.push({ from: p.url, to: l.url, anchorText: l.anchorText, status: pageMap.get(l.url)?.statusCode || 0 });
+        }
+      }
+    }
+    return rows;
+  }, [allPages, errorUrlSet, pageMap]);
+  const canonicalRobotsRows = useMemo(() => {
+    let baseHost = '';
+    try { baseHost = new URL(audit?.baseUrl || '').hostname; } catch {}
+    return allPages.map(p => {
+      let canonicalHost = '';
+      let canonical = p as any;
+      let canonUrl = (canonical.canonicalUrl || '').trim();
+      try { if (canonUrl) canonicalHost = new URL(canonUrl, audit?.baseUrl || undefined).hostname; } catch {}
+      const robots = (p as any).robotsMeta || '';
+      const noindex = /noindex/i.test(robots);
+      const nofollow = /nofollow/i.test(robots);
+      const missingCanonical = !canonUrl;
+      const crossDomainCanonical = canonUrl && baseHost && canonicalHost && canonicalHost !== baseHost;
+      return { url: p.url, canonicalUrl: canonUrl, robots, noindex, nofollow, missingCanonical, crossDomainCanonical };
+    });
+  }, [allPages, audit?.baseUrl]);
+  const canonicalCounts = useMemo(() => ({
+    missing: canonicalRobotsRows.filter(r => r.missingCanonical).length,
+    noindex: canonicalRobotsRows.filter(r => r.noindex).length,
+    nofollow: canonicalRobotsRows.filter(r => r.nofollow).length,
+    crossDomain: canonicalRobotsRows.filter(r => r.crossDomainCanonical).length,
+  }), [canonicalRobotsRows]);
+  const duplicateClusters = useMemo(() => {
+    const group = (keyFn: (p: AuditPage) => string) => {
+      const map = new Map<string, { key: string; pages: string[] }>();
+      for (const p of allPages) {
+        const k = keyFn(p).trim().toLowerCase();
+        if (!k) continue;
+        const item = map.get(k) || { key: k, pages: [] };
+        item.pages.push(p.url);
+        map.set(k, item);
+      }
+      return Array.from(map.values()).filter(c => c.pages.length > 1).sort((a,b)=>b.pages.length-a.pages.length);
+    };
+    return {
+      title: group(p => p.title || ''),
+      meta: group(p => p.metaDescription || ''),
+      h1: (() => {
+        const map = new Map<string, { key: string; pages: string[] }>();
+        for (const p of allPages) {
+          const first = (p.h1 && p.h1[0]) ? p.h1[0].trim().toLowerCase() : '';
+          if (!first) continue;
+          const item = map.get(first) || { key: first, pages: [] };
+          item.pages.push(p.url);
+          map.set(first, item);
+        }
+        return Array.from(map.values()).filter(c => c.pages.length > 1).sort((a,b)=>b.pages.length-a.pages.length);
+      })(),
+    };
+  }, [allPages]);
   const statusCodeSummary = useMemo(() => {
     const counts: Record<string, number> = {};
     allPages.forEach(p => { const code = String(p.statusCode || 0); counts[code] = (counts[code] || 0) + 1; });
@@ -278,6 +362,18 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
   }, [allPages, selectedStatusCode]);
   const titleRows = useMemo(() => allPages.map(p => { const len = (p.title || '').length; let issue = ''; if (!p.title) issue = 'Missing'; else if (len > 60) issue = 'Too Long'; else if (len < 30) issue = 'Too Short'; return { url: p.url, title: p.title || '', length: len, issue }; }), [allPages]);
   const metaRows = useMemo(() => allPages.map(p => { const len = (p.metaDescription || '').length; let issue = ''; if (!p.metaDescription) issue = 'Missing'; else if (len > 160) issue = 'Too Long'; else if (len < 120) issue = 'Too Short'; return { url: p.url, meta: p.metaDescription || '', length: len, issue }; }), [allPages]);
+  const headingRows = useMemo(() => {
+    const key = headingLevel;
+    return allPages.map(p => {
+      const arr = (p as any)[key] as string[] | undefined;
+      const list = Array.isArray(arr) ? arr : [];
+      const count = list.length;
+      const issue = key === 'h1' ? (count === 0 ? 'Missing' : (count > 1 ? 'Multiple' : '')) : '';
+      return { url: p.url, list, count, issue };
+    });
+  }, [allPages, headingLevel]);
+  const headingNoneCount = useMemo(() => headingRows.filter(r => r.count === 0).length, [headingRows]);
+  const headingMultiCount = useMemo(() => headingLevel === 'h1' ? headingRows.filter(r => r.count > 1).length : 0, [headingRows, headingLevel]);
 
   if (loading) {
     return (
@@ -373,8 +469,15 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
           </Select>
         </FormControl>
         <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleExportCsv}>Export CSV</Button>
+        <Button variant="text" onClick={() => { setSearch(''); setStatusCodeFilter(''); setIssueFilter(''); setSortBy('url'); setPage(0); }}>Reset Filters</Button>
       </Box>
       {pagesLoading && <LinearProgress sx={{ mb: 2 }} />}
+      {!pagesLoading && pages.length === 0 && (
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Typography>No pages found.</Typography>
+          <Typography variant="body2" color="text.secondary">Try Reset Filters, or wait while the crawl completes.</Typography>
+        </Paper>
+      )}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -634,7 +737,10 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
           <Tab label="Response Codes" />
           <Tab label="Page Titles" />
           <Tab label="Meta Descriptions" />
-          <Tab label="H1" />
+          <Tab label="Headings" />
+          <Tab label="Canonical & Robots" />
+          <Tab label="Broken Links" />
+          <Tab label="Duplicates" />
           <Tab label="PageSpeed" />
         </Tabs>
       </Box>
@@ -649,12 +755,157 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
       {activeTab === 5 && renderResponseCodesTab()}
       {activeTab === 6 && renderTitlesTab()}
       {activeTab === 7 && renderMetaTab()}
-      {activeTab === 8 && (
+      {activeTab === 8 && (() => {
+        const rows = headingRows.filter(r => {
+          if (!h1Search) return true;
+          const q = h1Search.toLowerCase();
+          const txt = r.list.join(' | ').toLowerCase();
+          return r.url.toLowerCase().includes(q) || txt.includes(q);
+        });
+        return (
+          <Box sx={{ p: 3 }}>
+            <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <InputLabel>Heading</InputLabel>
+                <Select label="Heading" value={headingLevel} onChange={(e) => setHeadingLevel(e.target.value as any)}>
+                  <MenuItem value="h1">H1</MenuItem>
+                  <MenuItem value="h2">H2</MenuItem>
+                  <MenuItem value="h3">H3</MenuItem>
+                  <MenuItem value="h4">H4</MenuItem>
+                  <MenuItem value="h5">H5</MenuItem>
+                  <MenuItem value="h6">H6</MenuItem>
+                </Select>
+              </FormControl>
+              <TextField size="small" label={`Search ${headingLevel.toUpperCase()}`} value={h1Search} onChange={(e) => setH1Search(e.target.value)} InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon /></InputAdornment>) }} sx={{ minWidth: 300 }} />
+              <Chip label={`No ${headingLevel.toUpperCase()}: ${headingNoneCount}`} size="small" color={headingNoneCount > 0 ? 'warning' : 'default'} />
+              {headingLevel === 'h1' && <Chip label={`Multiple H1: ${headingMultiCount}`} size="small" color={headingMultiCount > 0 ? 'warning' : 'default'} />}
+              <Chip label={`Total Pages: ${headingRows.length}`} size="small" />
+            </Box>
+            <TableContainer component={Paper}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>URL</TableCell>
+                    <TableCell>{headingLevel.toUpperCase()} Count</TableCell>
+                    <TableCell>{headingLevel.toUpperCase()} Preview</TableCell>
+                    <TableCell>Issue</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {rows.slice(0, 500).map((r, i) => (
+                    <TableRow key={i} hover>
+                      <TableCell><Typography variant="body2" sx={{ maxWidth: 420, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.url}</Typography></TableCell>
+                      <TableCell>{r.count}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ maxWidth: 520, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.list.join(' | ') || '-'}</Typography>
+                      </TableCell>
+                      <TableCell>{r.issue || '-'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {rows.length > 500 && (<Typography variant="caption" sx={{ mt: 1, display: 'block' }}>Showing first 500 rows. Refine your search to see more.</Typography>)}
+          </Box>
+        );
+      })()}
+      {activeTab === 9 && (() => {
+        const rows = canonicalRobotsRows;
+        return (
+          <Box sx={{ p: 3 }}>
+            <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Chip label={`Missing Canonical: ${canonicalCounts.missing}`} size="small" color={canonicalCounts.missing ? 'warning' : 'default'} />
+              <Chip label={`Cross-domain Canonical: ${canonicalCounts.crossDomain}`} size="small" color={canonicalCounts.crossDomain ? 'warning' : 'default'} />
+              <Chip label={`noindex: ${canonicalCounts.noindex}`} size="small" color={canonicalCounts.noindex ? 'warning' : 'default'} />
+              <Chip label={`nofollow: ${canonicalCounts.nofollow}`} size="small" color={canonicalCounts.nofollow ? 'warning' : 'default'} />
+              <Chip label={`Total Pages: ${rows.length}`} size="small" />
+            </Box>
+            <TableContainer component={Paper}>
+              <Table size="small">
+                <TableHead><TableRow><TableCell>URL</TableCell><TableCell>Canonical URL</TableCell><TableCell>Robots</TableCell><TableCell>Issues</TableCell></TableRow></TableHead>
+                <TableBody>
+                  {rows.slice(0, 500).map((r, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Typography variant="body2" sx={{ maxWidth: 420, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.url}</Typography></TableCell>
+                      <TableCell><Typography variant="body2" sx={{ maxWidth: 420, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.canonicalUrl || '-'}</Typography></TableCell>
+                      <TableCell><Typography variant="body2" sx={{ maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.robots || '-'}</Typography></TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          {r.missingCanonical && <Chip size="small" color="warning" label="Missing canonical" />}
+                          {r.crossDomainCanonical && <Chip size="small" color="warning" label="Cross-domain" />}
+                          {r.noindex && <Chip size="small" color="warning" label="noindex" />}
+                          {r.nofollow && <Chip size="small" color="warning" label="nofollow" />}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        );
+      })()}
+      {activeTab === 10 && (() => {
+        const rows = brokenInternalRows;
+        return (
+          <Box sx={{ p: 3 }}>
+            <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Chip label={`Broken internal links: ${rows.length}`} size="small" color={rows.length ? 'error' : 'default'} />
+            </Box>
+            <TableContainer component={Paper}>
+              <Table size="small">
+                <TableHead><TableRow><TableCell>From Page</TableCell><TableCell>To URL</TableCell><TableCell>Anchor</TableCell><TableCell>Target Status</TableCell></TableRow></TableHead>
+                <TableBody>
+                  {rows.slice(0, 1000).map((r, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Typography variant="body2" sx={{ maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.from}</Typography></TableCell>
+                      <TableCell><Typography variant="body2" sx={{ maxWidth: 420, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.to}</Typography></TableCell>
+                      <TableCell><Typography variant="body2" sx={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.anchorText || '-'}</Typography></TableCell>
+                      <TableCell>{r.status || '-'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {rows.length > 1000 && (<Typography variant="caption" sx={{ mt: 1, display: 'block' }}>Showing first 1000 rows. Refine your crawl or export for full list.</Typography>)}
+          </Box>
+        );
+      })()}
+      {activeTab === 11 && (() => (
         <Box sx={{ p: 3 }}>
-          <Typography>H1 analysis coming soon...</Typography>
+          <Typography variant="h6" gutterBottom>Duplicate Clusters</Typography>
+          <Grid container spacing={2}>
+            {[{label:'Titles', data: duplicateClusters.title}, {label:'Meta Descriptions', data: duplicateClusters.meta}, {label:'H1 (first)', data: duplicateClusters.h1}].map(section => (
+              <Grid item xs={12} md={4} key={section.label}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="subtitle1" gutterBottom>{section.label}</Typography>
+                    <Typography variant="caption" sx={{ mb: 1, display: 'block' }}>Clusters: {section.data.length}</Typography>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead><TableRow><TableCell>Value</TableCell><TableCell>Pages</TableCell></TableRow></TableHead>
+                        <TableBody>
+                          {section.data.slice(0, 50).map((c, i) => (
+                            <TableRow key={i}>
+                              <TableCell><Typography variant="body2" sx={{ maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.key}</Typography></TableCell>
+                              <TableCell>
+                                <Typography variant="caption" sx={{ display: 'block' }}>{c.pages.length}</Typography>
+                                <Typography variant="caption" sx={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.pages.join(' | ')}</Typography>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                    {section.data.length > 50 && (<Typography variant="caption" sx={{ mt: 1, display: 'block' }}>Showing first 50 clusters.</Typography>)}
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
         </Box>
-      )}
-      {activeTab === 9 && (
+      ))}
+      {activeTab === 12 && (
         <Box sx={{ p: 3 }}>
           <Typography sx={{ mb: 1 }}>Run Lighthouse (local) for this audit’s site. We’ll run both Mobile and Desktop.</Typography>
           <Typography variant="body2" color={audit?.baseUrl ? 'text.secondary' : 'error.main'} sx={{ mb: 2 }}>
