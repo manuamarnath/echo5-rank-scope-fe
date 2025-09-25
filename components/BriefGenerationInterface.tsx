@@ -83,41 +83,97 @@ export default function BriefGenerationInterface() {
     setIsGenerating(true);
     setGeneratedContent('');
     try {
-      const prompt = `Generate a complete SEO-optimized ${newBrief.contentType} for the following brief:\n\n` +
-        `Title: ${newBrief.title}\n` +
-        `Target Keyword: ${newBrief.targetKeyword}\n` +
-        `Secondary Keywords: ${(newBrief.secondaryKeywords || []).join(', ')}\n` +
-        `URL: ${newBrief.url}\n` +
-        `Word Count: ${newBrief.wordCount}\n` +
-        `Tone: ${newBrief.tone}\n` +
-        `Target Audience: ${newBrief.targetAudience}\n` +
-        `Outline: ${(newBrief.outline || []).join(' | ')}\n` +
-        `Meta Title: ${newBrief.metaTitle}\n` +
-        `Meta Description: ${newBrief.metaDescription}\n` +
-        `Notes: ${newBrief.notes}`;
+      // Check if we have comprehensive client data for the new prompt system
+      const selectedClient = clients.find(c => c._id === selectedClientId);
+      
+      if (!selectedClient) {
+        throw new Error('Please select a client first');
+      }
 
-  const FRONTEND_OPENAI_MODEL = process.env.NEXT_PUBLIC_OPENAI_MODEL || 'gpt-4o-mini';
+      // For now, we'll use the basic prompt if comprehensive data isn't available
+      // In a real implementation, you'd check if the client has contentData populated
+      const hasComprehensiveData = false; // This would check selectedClient.contentData
+      
+      let prompt: string;
+      
+      if (hasComprehensiveData) {
+        // Use the new comprehensive prompt system
+        // This would be implemented once client onboarding captures all required data
+        prompt = 'Comprehensive prompt system not yet fully integrated';
+      } else {
+        // Fallback to basic prompt for backwards compatibility
+        prompt = `Generate a complete SEO-optimized ${newBrief.contentType} for the following brief:\n\n` +
+          `Title: ${newBrief.title}\n` +
+          `Target Keyword: ${newBrief.targetKeyword}\n` +
+          `Secondary Keywords: ${(newBrief.secondaryKeywords || []).join(', ')}\n` +
+          `URL: ${newBrief.url}\n` +
+          `Word Count: ${newBrief.wordCount}\n` +
+          `Tone: ${newBrief.tone}\n` +
+          `Target Audience: ${newBrief.targetAudience}\n` +
+          `Outline: ${(newBrief.outline || []).join(' | ')}\n` +
+          `Meta Title: ${newBrief.metaTitle}\n` +
+          `Meta Description: ${newBrief.metaDescription}\n` +
+          `Notes: ${newBrief.notes}\n\n` +
+          `Please create comprehensive, SEO-optimized content that includes:\n` +
+          `- Proper heading structure (H1, H2, H3)\n` +
+          `- Meta title and description\n` +
+          `- FAQ section for voice search optimization\n` +
+          `- Call-to-action sections\n` +
+          `- Local SEO elements if applicable\n` +
+          `- Schema markup suggestions`;
+      }
+
+      const FRONTEND_OPENAI_MODEL = process.env.NEXT_PUBLIC_OPENAI_MODEL || 'gpt-4o-mini';
   
-  // Prepare request body - only include temperature for models that support it
-  const requestBody: any = {
-    prompt: prompt,
-    model: FRONTEND_OPENAI_MODEL,
-    max_tokens: 2048,
-  };
-  
-  // Only add temperature for models that support it (most models except o1)
-  if (!FRONTEND_OPENAI_MODEL.includes('o1')) {
-    requestBody.temperature = 0.7;
-  }
-  
-  const response = await fetch(endpoints.content.generate, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      // Prepare request body for comprehensive content generation
+      const requestBody: any = {
+        clientId: selectedClientId,
+        pageData: {
+          pageName: newBrief.title,
+          pageURL: newBrief.url || `/${newBrief.title.toLowerCase().replace(/\s+/g, '-')}/`,
+          service: newBrief.targetKeyword || newBrief.title
         },
-        body: JSON.stringify(requestBody),
-      });
+        model: FRONTEND_OPENAI_MODEL,
+        max_tokens: 4000,
+        useComprehensivePrompt: hasComprehensiveData
+      };
+      
+      // Only add temperature for models that support it (most models except o1)
+      if (!FRONTEND_OPENAI_MODEL.includes('o1')) {
+        requestBody.temperature = 0.7;
+      }
+      
+      // Prepare the request based on data availability
+      let response;
+      
+      if (hasComprehensiveData) {
+        // Use comprehensive endpoint with client data
+        response = await fetch(endpoints.content.generateComprehensive, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify(requestBody),
+        });
+      } else {
+        // Use basic endpoint with enhanced prompt
+        const basicRequestBody = {
+          prompt: prompt,
+          model: FRONTEND_OPENAI_MODEL,
+          max_tokens: 2048,
+          ...(FRONTEND_OPENAI_MODEL.includes('o1') ? {} : { temperature: 0.7 })
+        };
+        
+        response = await fetch(endpoints.content.generate, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify(basicRequestBody),
+        });
+      }
 
       if (!response.ok) throw new Error('Content generation API error: ' + response.statusText);
       const data = await response.json();

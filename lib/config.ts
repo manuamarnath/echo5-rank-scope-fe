@@ -22,6 +22,7 @@ export const endpoints = {
   },
   content: {
     generate: `${config.apiBaseUrl}/content/generate`,
+    generateComprehensive: `${config.apiBaseUrl}/content/generate-comprehensive`,
     test: `${config.apiBaseUrl}/content/test`,
   },
   clients: `${config.apiBaseUrl}/clients`,
