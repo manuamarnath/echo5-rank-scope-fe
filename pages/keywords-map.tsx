@@ -160,6 +160,20 @@ export default function KeywordsMapPage() {
     } catch (e:any) { setToast({ open: true, message: e.message || 'Failed to create ideas', severity: 'error' }); }
   };
 
+  const updateRankEnrollment = async (pageId: string, rankEnrollment: 'primary'|'primary+supporting3') => {
+    try {
+      const r = await fetch(`/api/pages/${pageId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+        body: JSON.stringify({ rankEnrollment })
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Failed to update rank');
+      setToast({ open: true, message: 'Rank enrollment updated', severity: 'success' });
+      await fetchMap();
+    } catch (e:any) { setToast({ open: true, message: e.message || 'Failed to update', severity: 'error' }); }
+  };
+
   return (
     <MainLayout>
       <Box sx={{ p: 2 }}>
@@ -210,6 +224,13 @@ export default function KeywordsMapPage() {
                 />
                 <CardContent>
                   <Stack spacing={2}>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Typography variant="subtitle2">Rank enrollment</Typography>
+                      <Stack direction="row" spacing={1}>
+                        <Button size="small" variant="outlined" onClick={()=>updateRankEnrollment(String(p.pageId), 'primary')}>Primary only</Button>
+                        <Button size="small" variant="outlined" onClick={()=>updateRankEnrollment(String(p.pageId), 'primary+supporting3')}>Primary + 3 supporting</Button>
+                      </Stack>
+                    </Stack>
                     <Stack direction="row" spacing={1}>
                       <Button size="small" variant="outlined" onClick={()=>generateSupporting(String(p.pageId))}>Add Supporting (AI)</Button>
                       <Button size="small" variant="outlined" onClick={()=>generateLocalized(String(p.pageId))}>Generate Localized</Button>

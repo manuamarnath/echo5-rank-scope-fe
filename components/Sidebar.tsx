@@ -1,7 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { Drawer, List, ListItem, ListItemIcon, ListItemText, Toolbar, Box } from '@mui/material';
-import { Home, Search, Person, Settings } from '@mui/icons-material';
+import { Home, Search, Person, Settings, Speed } from '@mui/icons-material';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import MapIcon from '@mui/icons-material/Map';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
@@ -28,6 +29,12 @@ const Sidebar: React.FC = () => {
                 <ListItemText primary="Home" />
               </ListItem>
             </Link>
+            <Link href="/audits" passHref legacyBehavior>
+              <ListItem component="a" sx={{ cursor: 'pointer' }}>
+                <ListItemIcon><AssessmentIcon /></ListItemIcon>
+                <ListItemText primary="Site Audits" />
+              </ListItem>
+            </Link>
             <Link href="/keywords-map" passHref legacyBehavior>
               <ListItem component="a" sx={{ cursor: 'pointer' }}>
                 <ListItemIcon><MapIcon /></ListItemIcon>
@@ -44,6 +51,12 @@ const Sidebar: React.FC = () => {
               <ListItem component="a" sx={{ cursor: 'pointer' }}>
                 <ListItemIcon><LibraryBooksIcon /></ListItemIcon>
                 <ListItemText primary="Blog Planner" />
+              </ListItem>
+            </Link>
+            <Link href="/performance" passHref legacyBehavior>
+              <ListItem component="a" sx={{ cursor: 'pointer' }}>
+                <ListItemIcon><Speed /></ListItemIcon>
+                <ListItemText primary="Performance" />
               </ListItem>
             </Link>
             <Link href="/search" passHref legacyBehavior>
