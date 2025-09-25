@@ -1,6 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import MainLayout from '../src/components/layout/MainLayout';
 import ClientSelector from '../components/ClientSelector';
+import {
+  Box,
+  Stack,
+  Typography,
+  Button,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Chip,
+  Tooltip,
+  IconButton,
+  LinearProgress,
+  Paper,
+  Snackbar,
+  Alert
+} from '@mui/material';
+import { Build } from '@mui/icons-material';
 
 type CoverageItem = { pageId: string; title?: string; slug?: string; type?: string; status?: string; counts: { primary:number; secondary:number; supporting:number }; rankHealth: { currentAvg:number|null; bestAvg:number|null } };
 
@@ -12,6 +31,7 @@ export default function HeatmapPage() {
   const [gaps, setGaps] = useState<Gaps>({ unmappedKeywords: [], pagesWithoutPrimary: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string|undefined>();
+  const [toast, setToast] = useState<{open:boolean; message:string; severity:'success'|'error'|'info'|'warning'}>({open:false, message:'', severity:'success'});
 
   const load = async () => {
     if (!clientId) return;
@@ -32,69 +52,87 @@ export default function HeatmapPage() {
 
   useEffect(()=>{ if (clientId) load(); }, [clientId]);
 
+  const fixCannibalization = async (pageId: string) => {
+    try {
+      const r = await fetch(`/api/heatmap/pages/${pageId}/fix-cannibalization`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` } });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Failed to fix');
+      setToast({ open: true, message: 'Cannibalization fixed', severity: 'success' });
+      await load();
+    } catch (e:any) { setToast({ open: true, message: e.message || 'Failed to fix', severity: 'error' }); }
+  };
+
   return (
     <MainLayout>
-      <div style={{ padding: 16 }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Coverage Heatmap</h1>
-        <div style={{ display: 'flex', gap: 8, margin: '12px 0', alignItems: 'flex-end' }}>
-          <ClientSelector value={clientId} onChange={setClientId} />
-          <button onClick={load} disabled={!clientId || loading} style={{ padding: '8px 12px' }}>Load</button>
-        </div>
-        {error && <div style={{ color: 'red' }}>{error}</div>}
-        {loading && <div>Loading…</div>}
+      <Box sx={{ p: 2 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+          <Typography variant="h5" fontWeight={700}>Coverage Heatmap</Typography>
+          <Stack direction="row" spacing={1} alignItems="flex-end">
+            <ClientSelector value={clientId} onChange={setClientId} />
+            <Button variant="contained" onClick={load} disabled={!clientId || loading}>Load</Button>
+          </Stack>
+        </Stack>
 
-        <div style={{ marginTop: 12 }}>
-          <h2 style={{ fontWeight: 700 }}>By Page</h2>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left', borderBottom: '1px solid #eee', padding: '8px 4px' }}>Page</th>
-                <th style={{ textAlign: 'left', borderBottom: '1px solid #eee', padding: '8px 4px' }}>Counts</th>
-                <th style={{ textAlign: 'left', borderBottom: '1px solid #eee', padding: '8px 4px' }}>Rank health</th>
-              </tr>
-            </thead>
-            <tbody>
+        {loading && <LinearProgress sx={{ mb: 2 }} />}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+        <Paper variant="outlined">
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Page</TableCell>
+                <TableCell>Counts</TableCell>
+                <TableCell>Rank health</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {coverage.map(p => (
-                <tr key={p.pageId}>
-                  <td style={{ borderBottom: '1px solid #f5f5f5', padding: '6px 4px' }}>
-                    <div style={{ fontWeight: 600 }}>{p.title || p.slug || p.pageId}</div>
-                    <div style={{ color: '#666', fontSize: 12 }}>{p.type} · {p.status}</div>
-                  </td>
-                  <td style={{ borderBottom: '1px solid #f5f5f5', padding: '6px 4px' }}>
-                    P:{p.counts.primary} · S:{p.counts.secondary} · Sup:{p.counts.supporting}
-                  </td>
-                  <td style={{ borderBottom: '1px solid #f5f5f5', padding: '6px 4px' }}>
-                    current≈{p.rankHealth.currentAvg ?? '—'} · best≈{p.rankHealth.bestAvg ?? '—'}
-                  </td>
-                </tr>
+                <TableRow key={p.pageId} hover>
+                  <TableCell>
+                    <Typography fontWeight={600}>{p.title || p.slug || p.pageId}</Typography>
+                    <Typography variant="caption" color="text.secondary">{p.type} · {p.status}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip size="small" label={`P: ${p.counts.primary}`} sx={{ mr: 0.5 }} />
+                    <Chip size="small" label={`S: ${p.counts.secondary}`} sx={{ mr: 0.5 }} />
+                    <Chip size="small" label={`Sup: ${p.counts.supporting}`} />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">current≈{p.rankHealth.currentAvg ?? '—'} · best≈{p.rankHealth.bestAvg ?? '—'}</Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Tooltip title="Fix Cannibalization">
+                      <span>
+                        <IconButton onClick={()=>fixCannibalization(String(p.pageId))}>
+                          <Build />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
               ))}
               {coverage.length === 0 && (
-                <tr><td colSpan={3} style={{ padding: 8, color: '#999' }}>No data</td></tr>
+                <TableRow>
+                  <TableCell colSpan={4}>
+                    <Typography color="text.secondary">No data</Typography>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Paper>
 
-        <div style={{ marginTop: 16 }}>
-          <h2 style={{ fontWeight: 700 }}>Gaps</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>Unmapped Keywords</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {gaps.unmappedKeywords.map(k => <span key={k._id} style={{ background: '#fff7ed', border: '1px solid #fed7aa', padding: '2px 6px', borderRadius: 4 }}>{k.text}</span>)}
-                {gaps.unmappedKeywords.length === 0 && <span style={{ color: '#999' }}>None</span>}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>Pages Without Primary</div>
-              <ul style={{ margin: 0, paddingLeft: 16 }}>
-                {gaps.pagesWithoutPrimary.map(p => <li key={p._id}>{p.title || p.slug || p._id}</li>)}
-                {gaps.pagesWithoutPrimary.length === 0 && <li style={{ color: '#999' }}>None</li>}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
+        <GridLike />
+      </Box>
+      <Snackbar open={toast.open} autoHideDuration={3000} onClose={()=>setToast(prev=>({ ...prev, open:false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={()=>setToast(prev=>({ ...prev, open:false }))} severity={toast.severity} sx={{ width: '100%' }}>
+          {toast.message}
+        </Alert>
+      </Snackbar>
     </MainLayout>
   );
 }
+
+// Placeholder for potential future grid/visualization section
+function GridLike() { return null; }
