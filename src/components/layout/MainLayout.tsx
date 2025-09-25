@@ -32,7 +32,10 @@ import {
   Analytics,
   AccountCircle,
   ExitToApp,
-  Security
+  Security,
+  Map,
+  Leaderboard,
+  LibraryBooks
 } from '@mui/icons-material';
 
 interface LayoutProps {
@@ -45,6 +48,9 @@ const navigationItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Dashboard },
   { href: '/clients', label: 'Clients', icon: People },
   { href: '/keywords', label: 'Keywords', icon: Search },
+  { href: '/keywords-map', label: 'Keyword Map', icon: Map },
+  { href: '/heatmap', label: 'Heatmap', icon: Leaderboard },
+  { href: '/blog-planner', label: 'Blog Planner', icon: LibraryBooks },
   { href: '/pages', label: 'Pages', icon: Description },
   { href: '/briefs', label: 'Briefs', icon: Edit },
   { href: '/tasks', label: 'Tasks', icon: Assignment },
