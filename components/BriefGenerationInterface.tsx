@@ -3,6 +3,7 @@ import { useAuth } from '../src/components/auth/AuthContext';
 import briefService, { Brief as BriefType } from '../services/briefService';
 import { Keyword } from '../src/components/keywords/interfaces';
 import { endpoints } from '../lib/config';
+import KeywordSelector from './KeywordSelector';
 
 export default function BriefGenerationInterface() {
   const { } = useAuth();
@@ -11,6 +12,7 @@ export default function BriefGenerationInterface() {
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [clients, setClients] = useState<{_id: string, name: string}[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [selectedSecondaryKeywords, setSelectedSecondaryKeywords] = useState<{keyword: string; searchVolume?: number; difficulty?: number; intent?: 'informational' | 'transactional' | 'navigational' | 'local'}[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -39,7 +41,10 @@ export default function BriefGenerationInterface() {
   }, []);
 
   useEffect(() => {
-    if (selectedClientId) fetchClientKeywords(selectedClientId);
+    if (selectedClientId) {
+      fetchClientKeywords(selectedClientId);
+      setSelectedSecondaryKeywords([]); // Reset selected keywords when client changes
+    }
   }, [selectedClientId]);
 
   const fetchClients = async () => {
@@ -60,16 +65,54 @@ export default function BriefGenerationInterface() {
   const fetchClientKeywords = async (clientId: string) => {
     try {
       setLoading(true);
-      const responseData = await briefService.fetchKeywords(clientId);
-      // Handle both paginated response (with data property) and direct array
-      const keywordsData = responseData.data || responseData;
-      setKeywords(keywordsData.map((k: {_id?: string; id?: string; text?: string; keyword?: string; volume?: number; searchVolume?: number; difficulty?: number; status?: string}) => ({
-        _id: k._id || k.id || '',
-        text: k.text || k.keyword || '',
-        searchVolume: k.volume || k.searchVolume || 0,
-        difficulty: k.difficulty || 0,
-        status: k.status || 'pending',
-      })));
+      
+      // Fetch client data to get seed keywords from onboarding
+      const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+      const clientResponse = await fetch(`/api/clients/${clientId}`, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+      
+      if (clientResponse.ok) {
+        const clientData = await clientResponse.json();
+        
+        // Combine primary keywords and seed keywords
+        const allKeywords = [];
+        
+        // Add primary keywords
+        if (clientData.primaryKeywords && clientData.primaryKeywords.length > 0) {
+          allKeywords.push(...clientData.primaryKeywords.map((pk: any) => ({
+            _id: `primary-${pk.keyword}`,
+            text: pk.keyword,
+            searchVolume: 0,
+            difficulty: 0,
+            status: 'primary',
+            intent: 'transactional'
+          })));
+        }
+        
+        // Add seed keywords (secondary keywords from onboarding)
+        if (clientData.seedKeywords && clientData.seedKeywords.length > 0) {
+          allKeywords.push(...clientData.seedKeywords.map((sk: any) => ({
+            _id: sk._id || `seed-${sk.keyword}`,
+            text: sk.keyword,
+            searchVolume: sk.searchVolume || 0,
+            difficulty: sk.difficulty || 0,
+            status: 'seed',
+            intent: sk.intent || 'informational'
+          })));
+        }
+        
+        setKeywords(allKeywords);
+      } else if (clientResponse.status === 401) {
+        // Invalid token: guide the user to login again
+        setError('Session expired or invalid. Please login again to fetch client keywords.');
+        setKeywords([]);
+      } else {
+        // Other errors
+        throw new Error('Failed to fetch client data');
+      }
     } catch (error) {
       console.error('Error fetching client keywords:', error);
       setError('Failed to fetch keywords for selected client');
@@ -90,16 +133,30 @@ export default function BriefGenerationInterface() {
         throw new Error('Please select a client first');
       }
 
-      // For now, we'll use the basic prompt if comprehensive data isn't available
-      // In a real implementation, you'd check if the client has contentData populated
-      const hasComprehensiveData = false; // This would check selectedClient.contentData
+      // Check if client has comprehensive data - first try to fetch it
+      let hasComprehensiveData = false;
+      
+      try {
+        const clientResponse = await fetch(`${endpoints.clients}/${selectedClientId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        
+        if (clientResponse.ok) {
+          const clientData = await clientResponse.json();
+          hasComprehensiveData = !!(clientData.contentData && clientData.contentData.businessType);
+        }
+      } catch (error) {
+        console.log('Could not fetch client comprehensive data, using basic prompt');
+        hasComprehensiveData = false;
+      }
       
       let prompt: string;
       
       if (hasComprehensiveData) {
-        // Use the new comprehensive prompt system
-        // This would be implemented once client onboarding captures all required data
-        prompt = 'Comprehensive prompt system not yet fully integrated';
+        // The comprehensive prompt will be generated server-side using client data
+        prompt = `Generate comprehensive content with AEO and GEO optimization for ${newBrief.title}`;
       } else {
         // Fallback to basic prompt for backwards compatibility
         prompt = `Generate a complete SEO-optimized ${newBrief.contentType} for the following brief:\n\n` +
@@ -117,10 +174,11 @@ export default function BriefGenerationInterface() {
           `Please create comprehensive, SEO-optimized content that includes:\n` +
           `- Proper heading structure (H1, H2, H3)\n` +
           `- Meta title and description\n` +
-          `- FAQ section for voice search optimization\n` +
+          `- FAQ section for voice search optimization (AEO)\n` +
           `- Call-to-action sections\n` +
-          `- Local SEO elements if applicable\n` +
-          `- Schema markup suggestions`;
+          `- Local SEO elements (GEO) if applicable\n` +
+          `- Schema markup suggestions\n` +
+          `- Geographic keywords and local business information`;
       }
 
       const FRONTEND_OPENAI_MODEL = process.env.NEXT_PUBLIC_OPENAI_MODEL || 'gpt-4o-mini';
@@ -133,6 +191,7 @@ export default function BriefGenerationInterface() {
           pageURL: newBrief.url || `/${newBrief.title.toLowerCase().replace(/\s+/g, '-')}/`,
           service: newBrief.targetKeyword || newBrief.title
         },
+        selectedKeywords: selectedSecondaryKeywords, // Pass selected secondary keywords
         model: FRONTEND_OPENAI_MODEL,
         max_tokens: 4000,
         useComprehensivePrompt: hasComprehensiveData
@@ -398,6 +457,34 @@ export default function BriefGenerationInterface() {
             </select>
           </div>
         </div>
+
+        {/* Secondary Keywords Selection */}
+        {selectedClientId && keywords.length > 0 && (
+          <div style={{ marginTop: '20px' }}>
+            <KeywordSelector
+              availableKeywords={keywords.map(k => ({
+                keyword: k.text,
+                searchVolume: k.searchVolume,
+                difficulty: k.difficulty,
+                intent: (k.intent === 'informational' || k.intent === 'transactional' || k.intent === 'navigational' || k.intent === 'local') 
+                  ? k.intent 
+                  : 'informational'
+              }))}
+              selectedKeywords={selectedSecondaryKeywords}
+              onKeywordSelectionChange={(keywords) => {
+                setSelectedSecondaryKeywords(keywords);
+                // Update the brief's secondary keywords
+                setNewBrief(prev => ({ 
+                  ...prev, 
+                  secondaryKeywords: keywords.map(k => k.keyword) 
+                }));
+              }}
+              maxSelections={8}
+              pageName={newBrief.title || 'Content Page'}
+              service={newBrief.targetKeyword || 'Service'}
+            />
+          </div>
+        )}
 
         {selectedClientId && keywords.length === 0 && (
           <div style={{ padding: '12px', backgroundColor: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: '8px' }}>

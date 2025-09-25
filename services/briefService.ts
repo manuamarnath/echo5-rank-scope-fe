@@ -260,16 +260,12 @@ export const duplicateBrief = async (briefId: string, token?: string) => {
 export const fetchClients = async (token?: string) => {
   try {
     const authToken = token || getAuthToken();
-    if (!authToken) {
-      throw new Error('No authentication token found');
-    }
+    const hasToken = !!authToken;
+    const url = hasToken ? '/api/clients' : '/api/clients/demo';
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (hasToken) headers['Authorization'] = `Bearer ${authToken}`;
 
-    const response = await fetch('/api/clients', {
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await fetch(url, { headers });
 
     if (!response.ok) {
       throw new Error(`Failed to fetch clients: ${response.statusText}`);

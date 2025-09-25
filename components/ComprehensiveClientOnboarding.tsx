@@ -25,6 +25,17 @@ interface ComprehensiveClientData {
     locationDescription: string;
     serviceAreas: string[];
     primaryServiceArea: string;
+    serviceAreaNeighborhoods: string[];
+    serviceAreaZipCodes: string[];
+    serviceRadiusMiles: number;
+    yearsInBusiness: number;
+    localBusinessAssociations: string[];
+    localBusinessExpertise: string;
+    communityInvolvement: string;
+    businessLatitude: number;
+    businessLongitude: number;
+    priceRange: string;
+    paymentMethods: string[];
     usps: string[];
     targetAudience: string;
     tone: 'professional' | 'casual' | 'technical' | 'conversational';
@@ -51,6 +62,32 @@ interface ComprehensiveClientData {
     searchVolume?: number;
     difficulty?: number;
   }>;
+
+  // Company profile for schema markup
+  companyProfile?: {
+    logoUrl?: string;
+    website?: string;
+    phone?: string;
+    email?: string;
+    socialProfiles?: {
+      facebook?: string;
+      twitter?: string;
+      linkedin?: string;
+      instagram?: string;
+      youtube?: string;
+    };
+    businessHours?: Array<{
+      day: string;
+      open: string;
+      close: string;
+      closed?: boolean;
+    }>;
+    founded?: number;
+    numberOfEmployees?: string;
+    paymentMethods?: string[];
+    priceRange?: string;
+    businessType?: string;
+  };
 }
 
 interface ComprehensiveClientOnboardingProps {
@@ -83,6 +120,17 @@ export default function ComprehensiveClientOnboarding({
       locationDescription: '',
       serviceAreas: [''],
       primaryServiceArea: '',
+      serviceAreaNeighborhoods: [''],
+      serviceAreaZipCodes: [''],
+      serviceRadiusMiles: 25,
+      yearsInBusiness: 1,
+      localBusinessAssociations: [''],
+      localBusinessExpertise: '',
+      communityInvolvement: '',
+      businessLatitude: 0,
+      businessLongitude: 0,
+      priceRange: '$$',
+      paymentMethods: ['Cash', 'Credit Cards'],
       usps: ['', '', '', '', ''],
       targetAudience: '',
       tone: 'professional',
@@ -101,6 +149,25 @@ export default function ComprehensiveClientOnboarding({
     },
     websiteStructure: [''],
     seedKeywords: [{ keyword: '' }],
+    companyProfile: {
+      logoUrl: '',
+      website: '',
+      phone: '',
+      email: '',
+      socialProfiles: {
+        facebook: '',
+        twitter: '',
+        linkedin: '',
+        instagram: '',
+        youtube: ''
+      },
+      businessHours: [],
+      founded: undefined,
+      numberOfEmployees: '',
+      paymentMethods: [],
+      priceRange: '',
+      businessType: ''
+    },
     ...initialData
   });
 
@@ -462,6 +529,417 @@ export default function ComprehensiveClientOnboarding({
               fontSize: '14px'
             }}
           />
+        </div>
+
+        {/* Enhanced GEO Fields */}
+        <div style={{ marginTop: '24px', padding: '20px', backgroundColor: '#F0F9FF', borderRadius: '12px', border: '1px solid #0EA5E9' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#0C4A6E' }}>
+            🎯 Enhanced Local SEO Data
+          </h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                Service Area Neighborhoods
+              </label>
+              <input
+                type="text"
+                value={formData.contentData.serviceAreaNeighborhoods.join(', ')}
+                onChange={(e) => updateFormData('contentData.serviceAreaNeighborhoods', e.target.value.split(', ').filter(s => s.trim()))}
+                placeholder="e.g., Downtown, Westside, North District"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                Service ZIP Codes
+              </label>
+              <input
+                type="text"
+                value={formData.contentData.serviceAreaZipCodes.join(', ')}
+                onChange={(e) => updateFormData('contentData.serviceAreaZipCodes', e.target.value.split(', ').filter(s => s.trim()))}
+                placeholder="e.g., 12345, 12346, 12347"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                Service Radius (Miles)
+              </label>
+              <input
+                type="number"
+                value={formData.contentData.serviceRadiusMiles}
+                onChange={(e) => updateFormData('contentData.serviceRadiusMiles', parseInt(e.target.value) || 25)}
+                placeholder="25"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                Years in Business
+              </label>
+              <input
+                type="number"
+                value={formData.contentData.yearsInBusiness}
+                onChange={(e) => updateFormData('contentData.yearsInBusiness', parseInt(e.target.value) || 1)}
+                placeholder="15"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                Local Business Associations
+              </label>
+              <input
+                type="text"
+                value={formData.contentData.localBusinessAssociations.join(', ')}
+                onChange={(e) => updateFormData('contentData.localBusinessAssociations', e.target.value.split(', ').filter(s => s.trim()))}
+                placeholder="e.g., Chamber of Commerce, Business Association"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                Price Range
+              </label>
+              <select
+                value={formData.contentData.priceRange}
+                onChange={(e) => updateFormData('contentData.priceRange', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              >
+                <option value="$">$ - Budget Friendly</option>
+                <option value="$$">$$ - Moderate</option>
+                <option value="$$$">$$$ - Premium</option>
+                <option value="$$$$">$$$$ - Luxury</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '16px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+              Local Business Expertise
+            </label>
+            <textarea
+              value={formData.contentData.localBusinessExpertise}
+              onChange={(e) => updateFormData('contentData.localBusinessExpertise', e.target.value)}
+              placeholder="e.g., Specializing in hurricane-resistant installations for Florida homes"
+              rows={2}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #D1D5DB',
+                borderRadius: '8px',
+                fontSize: '14px',
+                resize: 'vertical'
+              }}
+            />
+          </div>
+
+          <div style={{ marginTop: '16px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+              Community Involvement
+            </label>
+            <textarea
+              value={formData.contentData.communityInvolvement}
+              onChange={(e) => updateFormData('contentData.communityInvolvement', e.target.value)}
+              placeholder="e.g., Sponsor of local youth sports, volunteer at community events"
+              rows={2}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #D1D5DB',
+                borderRadius: '8px',
+                fontSize: '14px',
+                resize: 'vertical'
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Company Profile & Schema Data */}
+        <div style={{ 
+          backgroundColor: '#F3F4F6', 
+          border: '1px solid #E5E7EB', 
+          borderRadius: '8px', 
+          padding: '20px', 
+          marginTop: '24px' 
+        }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#1F2937' }}>
+            Company Profile & Schema Data
+          </h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                Company Website URL
+              </label>
+              <input
+                type="url"
+                value={formData.companyProfile?.website || ''}
+                onChange={(e) => updateFormData('companyProfile.website', e.target.value)}
+                placeholder="https://www.yourcompany.com"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                Company Logo URL
+              </label>
+              <input
+                type="url"
+                value={formData.companyProfile?.logoUrl || ''}
+                onChange={(e) => updateFormData('companyProfile.logoUrl', e.target.value)}
+                placeholder="https://www.yourcompany.com/logo.png"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                Business Phone Number
+              </label>
+              <input
+                type="tel"
+                value={formData.companyProfile?.phone || ''}
+                onChange={(e) => updateFormData('companyProfile.phone', e.target.value)}
+                placeholder="+1-555-555-5555"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                Business Email
+              </label>
+              <input
+                type="email"
+                value={formData.companyProfile?.email || ''}
+                onChange={(e) => updateFormData('companyProfile.email', e.target.value)}
+                placeholder="info@yourcompany.com"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginTop: '16px' }}>
+            <h4 style={{ fontSize: '16px', fontWeight: '500', marginBottom: '12px', color: '#374151' }}>
+              Social Media Profiles
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                  Facebook URL
+                </label>
+                <input
+                  type="url"
+                  value={formData.companyProfile?.socialProfiles?.facebook || ''}
+                  onChange={(e) => updateFormData('companyProfile.socialProfiles.facebook', e.target.value)}
+                  placeholder="https://www.facebook.com/yourcompany"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                  LinkedIn URL
+                </label>
+                <input
+                  type="url"
+                  value={formData.companyProfile?.socialProfiles?.linkedin || ''}
+                  onChange={(e) => updateFormData('companyProfile.socialProfiles.linkedin', e.target.value)}
+                  placeholder="https://www.linkedin.com/company/yourcompany"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                  Twitter URL
+                </label>
+                <input
+                  type="url"
+                  value={formData.companyProfile?.socialProfiles?.twitter || ''}
+                  onChange={(e) => updateFormData('companyProfile.socialProfiles.twitter', e.target.value)}
+                  placeholder="https://www.twitter.com/yourcompany"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                  Instagram URL
+                </label>
+                <input
+                  type="url"
+                  value={formData.companyProfile?.socialProfiles?.instagram || ''}
+                  onChange={(e) => updateFormData('companyProfile.socialProfiles.instagram', e.target.value)}
+                  placeholder="https://www.instagram.com/yourcompany"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginTop: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                Year Founded
+              </label>
+              <input
+                type="number"
+                value={formData.companyProfile?.founded || ''}
+                onChange={(e) => updateFormData('companyProfile.founded', parseInt(e.target.value))}
+                placeholder="2020"
+                min="1900"
+                max={new Date().getFullYear()}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                Number of Employees
+              </label>
+              <select
+                value={formData.companyProfile?.numberOfEmployees || ''}
+                onChange={(e) => updateFormData('companyProfile.numberOfEmployees', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              >
+                <option value="">Select range</option>
+                <option value="1-10">1-10 employees</option>
+                <option value="11-50">11-50 employees</option>
+                <option value="51-200">51-200 employees</option>
+                <option value="201-500">201-500 employees</option>
+                <option value="500+">500+ employees</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#374151' }}>
+                Business Type
+              </label>
+              <select
+                value={formData.companyProfile?.businessType || ''}
+                onChange={(e) => updateFormData('companyProfile.businessType', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              >
+                <option value="">Select type</option>
+                <option value="Corporation">Corporation</option>
+                <option value="LLC">LLC</option>
+                <option value="Partnership">Partnership</option>
+                <option value="Sole Proprietorship">Sole Proprietorship</option>
+                <option value="Non-Profit">Non-Profit</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
     </div>

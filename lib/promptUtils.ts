@@ -22,6 +22,17 @@ export interface ClientData {
     locationDescription?: string;
     serviceAreas: string[];
     primaryServiceArea: string;
+    serviceAreaNeighborhoods?: string[]; // New: Specific neighborhoods
+    serviceAreaZipCodes?: string[]; // New: ZIP codes covered
+    serviceRadiusMiles?: number; // New: Service radius
+    yearsInBusiness?: number; // New: Business experience
+    localBusinessAssociations?: string[]; // New: Chamber, associations
+    localBusinessExpertise?: string; // New: Local specialization
+    communityInvolvement?: string; // New: Community engagement
+    businessLatitude?: number; // New: GPS coordinates
+    businessLongitude?: number; // New: GPS coordinates
+    priceRange?: string; // New: Service pricing range
+    paymentMethods?: string[]; // New: Accepted payments
     usps: string[];
     targetAudience: string;
     tone: 'professional' | 'casual' | 'technical' | 'conversational';
@@ -39,12 +50,69 @@ export interface ClientData {
     businessDescription: string;
   };
   websiteStructure: string[];
+  companyProfile?: {
+    logoUrl?: string;
+    website?: string;
+    phone?: string;
+    email?: string;
+    socialProfiles?: {
+      facebook?: string;
+      twitter?: string;
+      linkedin?: string;
+      instagram?: string;
+      youtube?: string;
+    };
+    businessHours?: Array<{
+      day: string;
+      open: string;
+      close: string;
+      closed?: boolean;
+    }>;
+    founded?: number;
+    numberOfEmployees?: string;
+    paymentMethods?: string[];
+    priceRange?: string;
+    businessType?: string;
+  };
+  websiteAnalysis?: {
+    status: string;
+    insights?: {
+      content?: {
+        topKeywords?: Array<{ word: string; count: number }>;
+        contentThemes?: any;
+        localSEOOpportunities?: string[];
+      };
+      seo?: {
+        contentGaps?: string[];
+        titleOptimization?: {
+          issues?: string[];
+        };
+        headingStructure?: {
+          issues?: string[];
+        };
+      };
+      opportunities?: {
+        missingPages?: string[];
+        contentEnhancements?: string[];
+        localOptimizations?: string[];
+      };
+    };
+    recommendations?: Array<{
+      category: string;
+      priority: string;
+      title: string;
+      description: string;
+      action: string;
+    }>;
+  };
 }
 
 export interface PageData {
   pageName: string;
   pageURL: string;
   service: string;
+  selectedKeywords?: Array<{ keyword: string; searchVolume?: number; difficulty?: number }>;
+  assignedKeywords?: string; // Comma-separated string of selected keywords
 }
 
 /**
@@ -127,6 +195,19 @@ export function preparePrompt(clientData: ClientData, pageData: PageData): strin
   prompt = prompt.replace(/\[Primary GEO Keyword\]/g, contentData.primaryGeoKeyword);
   prompt = prompt.replace(/\[Drive Times Description\]/g, contentData.driveTimesDescription || '');
   
+  // Enhanced GEO data
+  prompt = prompt.replace(/\[Service Area Neighborhoods\]/g, contentData.serviceAreaNeighborhoods?.join(', ') || contentData.primaryServiceArea);
+  prompt = prompt.replace(/\[Service Area ZIP Codes\]/g, contentData.serviceAreaZipCodes?.join(', ') || '');
+  prompt = prompt.replace(/\[Service Radius Miles\]/g, contentData.serviceRadiusMiles?.toString() || '25');
+  prompt = prompt.replace(/\[Years In Business\]/g, contentData.yearsInBusiness?.toString() || '10+');
+  prompt = prompt.replace(/\[Local Business Associations\]/g, contentData.localBusinessAssociations?.join(', ') || `${clientData.address.city} Chamber of Commerce`);
+  prompt = prompt.replace(/\[Local Business Expertise\]/g, contentData.localBusinessExpertise || `Serving ${clientData.address.city} area`);
+  prompt = prompt.replace(/\[Community Involvement\]/g, contentData.communityInvolvement || `Active in ${clientData.address.city} community`);
+  prompt = prompt.replace(/\[Business Latitude\]/g, contentData.businessLatitude?.toString() || '0');
+  prompt = prompt.replace(/\[Business Longitude\]/g, contentData.businessLongitude?.toString() || '0');
+  prompt = prompt.replace(/\[Price Range\]/g, contentData.priceRange || '$$');
+  prompt = prompt.replace(/\[Payment Methods\]/g, contentData.paymentMethods?.join(', ') || 'Cash, Check, Credit Cards');
+  
   // Business hours and description
   prompt = prompt.replace(/\[Business Hours\]/g, contentData.businessHours || '');
   prompt = prompt.replace(/\[Business Description\]/g, contentData.businessDescription);
@@ -149,8 +230,28 @@ export function preparePrompt(clientData: ClientData, pageData: PageData): strin
   prompt = prompt.replace(/\[Insert Client's 25\+ Keywords Here\]/g, keywordList);
   
   // Assigned keywords for this specific page
-  const assignedKeywords = allocateKeywords(clientData.seedKeywords, pageData.pageName);
+  let assignedKeywords;
+  if (pageData.selectedKeywords && pageData.selectedKeywords.length > 0) {
+    // Use manually selected keywords
+    assignedKeywords = pageData.selectedKeywords.map(k => k.keyword);
+  } else if (pageData.assignedKeywords) {
+    // Use pre-assigned keywords string
+    assignedKeywords = pageData.assignedKeywords.split(', ').filter(k => k.trim());
+  } else {
+    // Fall back to automatic allocation
+    assignedKeywords = allocateKeywords(clientData.seedKeywords, pageData.pageName);
+  }
+  
   prompt = prompt.replace(/\[Assigned Keywords\]/g, assignedKeywords.join(', '));
+  
+  // Add strategic keyword placement information
+  const primaryKeyword = assignedKeywords[0] || pageData.service;
+  const secondaryKeywords = assignedKeywords.slice(1, 4).join(', ');
+  const longTailKeywords = assignedKeywords.slice(4).join(', ');
+  
+  prompt = prompt.replace(/\[Primary Target Keyword\]/g, primaryKeyword);
+  prompt = prompt.replace(/\[Secondary Keywords\]/g, secondaryKeywords || primaryKeyword);
+  prompt = prompt.replace(/\[Long Tail Keywords\]/g, longTailKeywords || primaryKeyword);
   
   // Page-specific data
   prompt = prompt.replace(/\[Page Name\]/g, pageData.pageName);
@@ -183,6 +284,113 @@ export function preparePrompt(clientData: ClientData, pageData: PageData): strin
   
   // Encoded address for URLs
   prompt = prompt.replace(/\[Business Address Encoded\]/g, encodeURIComponent(clientData.address.full));
+  
+  // Company profile data for schema markup
+  const companyProfile = clientData.companyProfile;
+  if (companyProfile) {
+    prompt = prompt.replace(/\[Company Logo URL\]/g, companyProfile.logoUrl || '');
+    prompt = prompt.replace(/\[Company Website URL\]/g, companyProfile.website || clientData.website);
+    prompt = prompt.replace(/\[Company Phone\]/g, companyProfile.phone || clientData.phone || '');
+    prompt = prompt.replace(/\[Company Email\]/g, companyProfile.email || '');
+    prompt = prompt.replace(/\[Company Founded Year\]/g, companyProfile.founded?.toString() || '');
+    prompt = prompt.replace(/\[Company Employees\]/g, companyProfile.numberOfEmployees || '');
+    prompt = prompt.replace(/\[Company Business Type\]/g, companyProfile.businessType || '');
+    
+    // Social media profiles
+    const socialProfiles = companyProfile.socialProfiles;
+    if (socialProfiles) {
+      prompt = prompt.replace(/\[Facebook URL\]/g, socialProfiles.facebook || '');
+      prompt = prompt.replace(/\[Twitter URL\]/g, socialProfiles.twitter || '');
+      prompt = prompt.replace(/\[LinkedIn URL\]/g, socialProfiles.linkedin || '');
+      prompt = prompt.replace(/\[Instagram URL\]/g, socialProfiles.instagram || '');
+      prompt = prompt.replace(/\[YouTube URL\]/g, socialProfiles.youtube || '');
+      
+      // Create social media array for schema
+      const socialMediaArray = [
+        socialProfiles.facebook,
+        socialProfiles.twitter,
+        socialProfiles.linkedin,
+        socialProfiles.instagram,
+        socialProfiles.youtube
+      ].filter(url => url && url.trim())
+       .map(url => `"${url}"`)
+       .join(',');
+      
+      prompt = prompt.replace(/\[Social Media Array\]/g, `[${socialMediaArray}]`);
+    } else {
+      // Default empty values if no social profiles
+      prompt = prompt.replace(/\[Facebook URL\]/g, '');
+      prompt = prompt.replace(/\[Twitter URL\]/g, '');
+      prompt = prompt.replace(/\[LinkedIn URL\]/g, '');
+      prompt = prompt.replace(/\[Instagram URL\]/g, '');
+      prompt = prompt.replace(/\[YouTube URL\]/g, '');
+      prompt = prompt.replace(/\[Social Media Array\]/g, '[]');
+    }
+  } else {
+    // Default empty values if no company profile
+    prompt = prompt.replace(/\[Company Logo URL\]/g, '');
+    prompt = prompt.replace(/\[Company Website URL\]/g, clientData.website);
+    prompt = prompt.replace(/\[Company Phone\]/g, clientData.phone || '');
+    prompt = prompt.replace(/\[Company Email\]/g, '');
+    prompt = prompt.replace(/\[Company Founded Year\]/g, '');
+    prompt = prompt.replace(/\[Company Employees\]/g, '');
+    prompt = prompt.replace(/\[Company Business Type\]/g, '');
+    prompt = prompt.replace(/\[Facebook URL\]/g, '');
+    prompt = prompt.replace(/\[Twitter URL\]/g, '');
+    prompt = prompt.replace(/\[LinkedIn URL\]/g, '');
+    prompt = prompt.replace(/\[Instagram URL\]/g, '');
+    prompt = prompt.replace(/\[YouTube URL\]/g, '');
+    prompt = prompt.replace(/\[Social Media Array\]/g, '[]');
+  }
+  
+  // Website analysis insights integration
+  if (clientData.websiteAnalysis && clientData.websiteAnalysis.status === 'completed' && clientData.websiteAnalysis.insights) {
+    const analysis = clientData.websiteAnalysis.insights;
+    
+    // Add content gaps and opportunities
+    const contentGaps = analysis.seo?.contentGaps || [];
+    const missingPages = analysis.opportunities?.missingPages || [];
+    const contentEnhancements = analysis.opportunities?.contentEnhancements || [];
+    const localOptimizations = analysis.opportunities?.localOptimizations || [];
+    
+    // Create comprehensive analysis insights for AI
+    const analysisInsights = [
+      ...contentGaps.map(gap => `Content Gap: ${gap}`),
+      ...missingPages.map(page => `Missing Page: ${page}`),
+      ...contentEnhancements.map(enhancement => `Enhancement: ${enhancement}`),
+      ...localOptimizations.map(opt => `Local SEO: ${opt}`)
+    ].slice(0, 10); // Limit to top 10 insights
+    
+    prompt = prompt.replace(/\[Website Analysis Insights\]/g, analysisInsights.length > 0 ? 
+      `\n\n**WEBSITE ANALYSIS INSIGHTS:**\nBased on analysis of ${clientData.website}, consider addressing these opportunities in your content:\n${analysisInsights.map(insight => `- ${insight}`).join('\n')}\n` : 
+      ''
+    );
+    
+    // Add competitor keywords if available
+    const topKeywords = analysis.content?.topKeywords || [];
+    const competitorKeywords = topKeywords.slice(0, 15).map(kw => kw.word).join(', ');
+    prompt = prompt.replace(/\[Competitor Keywords\]/g, competitorKeywords ? 
+      `Current website keywords: ${competitorKeywords}` : 
+      ''
+    );
+    
+    // Add SEO recommendations
+    const seoRecommendations = clientData.websiteAnalysis.recommendations
+      ?.filter(rec => rec.category === 'SEO' && rec.priority === 'high')
+      .slice(0, 3)
+      .map(rec => rec.action) || [];
+    
+    prompt = prompt.replace(/\[SEO Recommendations\]/g, seoRecommendations.length > 0 ? 
+      `\n**HIGH-PRIORITY SEO IMPROVEMENTS:**\n${seoRecommendations.map(rec => `- ${rec}`).join('\n')}\n` : 
+      ''
+    );
+    
+  } else {
+    // Default empty values if no analysis
+    prompt = prompt.replace(/\[Website Analysis Insights\]/g, '');
+    prompt = prompt.replace(/\[Competitor Keywords\]/g, '');
+    prompt = prompt.replace(/\[SEO Recommendations\]/g, '');
+  }
   
   return prompt;
 }
@@ -240,6 +448,17 @@ export function createSampleClientData(): ClientData {
       locationDescription: "conveniently located in downtown Anytown",
       serviceAreas: ["Anytown", "Nearby City", "Another City"],
       primaryServiceArea: "Anytown",
+      serviceAreaNeighborhoods: ["Downtown Anytown", "Westside", "Eastside", "North District"],
+      serviceAreaZipCodes: ["12345", "12346", "12347"],
+      serviceRadiusMiles: 25,
+      yearsInBusiness: 15,
+      localBusinessAssociations: ["Anytown Chamber of Commerce", "ST Business Association"],
+      localBusinessExpertise: "Specializing in professional services for Anytown residents",
+      communityInvolvement: "Active sponsor of local community events and youth programs",
+      businessLatitude: 40.7128,
+      businessLongitude: -74.0060,
+      priceRange: "$$",
+      paymentMethods: ["Cash", "Check", "Credit Cards", "Online Payment"],
       usps: [
         "Professional expertise",
         "Local family-owned business", 
