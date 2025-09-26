@@ -5,6 +5,7 @@ import { CacheProvider, EmotionCache } from '@emotion/react';
 import { AuthProvider } from '../src/components/auth/AuthContext';
 import theme from '../src/theme/theme';
 import createEmotionCache from '../src/utils/createEmotionCache';
+import Head from 'next/head';
 
 // Client-side cache, shared for the whole session of the user in the browser.
 const clientSideEmotionCache = createEmotionCache();
@@ -18,6 +19,9 @@ export default function App(props: MyAppProps) {
   
   return (
     <CacheProvider value={emotionCache}>
+      <Head>
+        <title>Seo-Ops OS</title>
+      </Head>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <AuthProvider>
