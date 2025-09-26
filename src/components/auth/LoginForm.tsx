@@ -44,7 +44,7 @@ export default function LoginForm({ onToggleMode }: LoginFormProps) {
             color: '#111827',
             marginBottom: '0.5rem'
           }}>
-            Sign in to RankScope
+            Sign in to Seo-Ops OS
           </h2>
           <p style={{ textAlign: 'center', fontSize: '0.875rem', color: '#6b7280' }}>
             Or{' '}

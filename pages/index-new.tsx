@@ -79,7 +79,7 @@ export default function Home() {
         <Box sx={{ py: 4 }}>
           <Box sx={{ textAlign: 'center', mb: 6 }}>
             <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
-              Welcome to RankScope
+              Welcome to Seo-Ops OS
             </Typography>
             <Typography variant="h6" color="text.secondary" gutterBottom>
               Hello {user.email}! You are logged in as a {user.role}.

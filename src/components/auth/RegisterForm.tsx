@@ -57,7 +57,7 @@ export default function RegisterForm({ onToggleMode }: RegisterFormProps) {
             color: '#111827',
             marginBottom: '0.5rem'
           }}>
-            Create your RankScope account
+            Create your Seo-Ops OS account
           </h2>
           <p style={{ textAlign: 'center', fontSize: '0.875rem', color: '#6b7280' }}>
             Or{' '}

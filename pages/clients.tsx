@@ -328,7 +328,7 @@ export default function ClientsPage() {
               No clients yet
             </h3>
             <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
-              Get started by adding your first client to the RankScope platform.
+              Get started by adding your first client to the Seo-Ops OS platform.
             </p>
             {user?.role === 'owner' && (
               <button

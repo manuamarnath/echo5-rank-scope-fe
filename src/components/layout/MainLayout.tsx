@@ -93,7 +93,7 @@ export default function MainLayout({ children }: LayoutProps) {
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
         }}>
-          RankScope
+          Seo-Ops OS
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           SEO Management Platform

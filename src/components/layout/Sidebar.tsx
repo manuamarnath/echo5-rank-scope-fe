@@ -52,7 +52,7 @@ export default function Sidebar({ theme }: SidebarProps) {
             WebkitTextFillColor: 'transparent',
           }}
         >
-          RankScope
+          Seo-Ops OS
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           SEO Management Platform

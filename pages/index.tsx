@@ -42,7 +42,7 @@ export default function Home() {
             gutterBottom
             sx={{ fontWeight: 'bold', mb: 2 }}
           >
-            Welcome to RankScope
+            Welcome to Seo-Ops OS
           </Typography>
           <Typography variant="h6" color="textSecondary" paragraph>
             Hello {user.email}! You are logged in as a {user.role}.

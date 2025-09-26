@@ -143,7 +143,7 @@ export default function SignIn({ onToggleMode }: SignInProps) {
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
             <RankScopeIcon sx={{ mr: 1, fontSize: 32 }} />
             <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
-              RankScope
+              Seo-Ops OS
             </Typography>
           </Box>
           <Typography
