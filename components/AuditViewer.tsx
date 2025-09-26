@@ -744,14 +744,14 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={activeTab} onChange={handleTabChange}>
           <Tab label={`Overview`} />
+          <Tab label={`Page Titles (${titlesCount})`} />
+          <Tab label={`Meta Descriptions (${metaCount})`} />
+          <Tab label={`Headings (${headingsCount})`} />
           <Tab label={`Pages (${pagesCount})`} />
           <Tab label={`Internal Links (${internalLinksCount})`} />
           <Tab label={`External Links (${externalLinksCount})`} />
           <Tab label={`Images (${imagesCount})`} />
           <Tab label={`Response Codes (${responseCodesCount})`} />
-          <Tab label={`Page Titles (${titlesCount})`} />
-          <Tab label={`Meta Descriptions (${metaCount})`} />
-          <Tab label={`Headings (${headingsCount})`} />
           <Tab label={`Canonical & Robots (${canonicalRobotsCount})`} />
           <Tab label={`Broken Links (${brokenLinksCount})`} />
           <Tab label={`Duplicates (${duplicatesCount})`} />

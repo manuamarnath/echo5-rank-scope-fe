@@ -174,7 +174,7 @@ const Audits: React.FC = () => {
         {/* Header */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h4" gutterBottom>
-            SEO Site Audit
+            SEO Site Audit 
           </Typography>
           <Typography variant="body1" color="text.secondary">
             Select a client and start crawling their website for SEO analysis
