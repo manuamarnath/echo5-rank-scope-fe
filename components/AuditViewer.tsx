@@ -762,14 +762,9 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
         <Typography color="error" sx={{ px: 3, pt: 1 }}>{error}</Typography>
       )}
       {activeTab === 0 && renderOverviewTab()}
-      {activeTab === 1 && renderPagesTab()}
-      {activeTab === 2 && renderInternalLinksTab()}
-      {activeTab === 3 && renderExternalLinksTab()}
-      {activeTab === 4 && renderImagesTab()}
-      {activeTab === 5 && renderResponseCodesTab()}
-      {activeTab === 6 && renderTitlesTab()}
-      {activeTab === 7 && renderMetaTab()}
-      {activeTab === 8 && (() => {
+      {activeTab === 1 && renderTitlesTab()}
+      {activeTab === 2 && renderMetaTab()}
+      {activeTab === 3 && (() => {
         const rows = headingRows.filter(r => {
           if (!h1Search) return true;
           const q = h1Search.toLowerCase();
@@ -823,6 +818,11 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
           </Box>
         );
       })()}
+      {activeTab === 4 && renderPagesTab()}
+      {activeTab === 5 && renderInternalLinksTab()}
+      {activeTab === 6 && renderExternalLinksTab()}
+      {activeTab === 7 && renderImagesTab()}
+      {activeTab === 8 && renderResponseCodesTab()}
       {activeTab === 9 && (() => {
         const rows = canonicalRobotsRows;
         return (
