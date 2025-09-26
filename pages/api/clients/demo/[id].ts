@@ -11,40 +11,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                       process.env.NEXT_PUBLIC_API_BASE_URL || 
                       'https://echo5-rank-scope-be.onrender.com';
 
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Authorization header required' });
-    }
-
-    const targetUrl = `${backendUrl}/api/clients/${id}`;
     const method = req.method || 'GET';
-    if (!['GET', 'PUT', 'DELETE', 'OPTIONS'].includes(method)) {
-      res.setHeader('Allow', 'GET, PUT, DELETE, OPTIONS');
+    if (!['DELETE', 'PUT', 'GET'].includes(method)) {
+      res.setHeader('Allow', 'GET, PUT, DELETE');
       return res.status(405).json({ message: 'Method not allowed' });
     }
 
-    const init: RequestInit = {
-      method,
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json',
-      },
-    };
+    const targetUrl = `${backendUrl}/api/clients/demo/${id}`;
+    const init: RequestInit = { method, headers: { 'Content-Type': 'application/json' } };
     if (method === 'PUT') {
       init.body = JSON.stringify(req.body || {});
     }
 
     const response = await fetch(targetUrl, init);
     const text = await response.text();
-    // Safely handle empty response bodies (e.g., 204 No Content)
     let data: any = {};
     if (text && text.trim()) {
       try { data = JSON.parse(text); } catch { data = { message: text.substring(0, 200) }; }
     }
 
     return res.status(response.status).json(data);
-  } catch (error) {
-    console.error('Client API error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+  } catch (error: any) {
+    console.error('Clients demo [id] API error:', error);
+    return res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 }
