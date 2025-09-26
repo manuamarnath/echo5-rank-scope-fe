@@ -388,6 +388,9 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
   const brokenLinksCount = brokenInternalRows.length;
   const duplicatesCount = (duplicateClusters.title.length + duplicateClusters.meta.length + duplicateClusters.h1.length);
   const pageSpeedCount = (psiMobile ? 1 : 0) + (psiDesktop ? 1 : 0);
+  
+
+   //console.log("Duplicate Clusters:", duplicatesCount); 
 
   if (loading) {
     return (
@@ -742,7 +745,18 @@ const AuditViewer: React.FC<AuditViewerProps> = ({ auditId, onClose }) => {
         </Box>
       </Box>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={activeTab} onChange={handleTabChange}>
+        <Tabs 
+          value={activeTab} 
+          onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          sx={{
+            '& .MuiTabs-scrollButtons': {
+              '&.Mui-disabled': { opacity: 0.3 },
+            },
+          }}
+        >
           <Tab label={`Overview`} />
           <Tab label={`Page Titles (${titlesCount})`} />
           <Tab label={`Meta Descriptions (${metaCount})`} />
