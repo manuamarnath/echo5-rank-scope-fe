@@ -84,7 +84,17 @@ export default function MainLayout({ children }: LayoutProps) {
   };
 
   const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        overflowX: "auto",
+        scrollbarWidth: "none", // Firefox
+        "&::-webkit-scrollbar": {
+          display: "none", // Chrome, Safari
+        },
+        msOverflowStyle: "none", // IE/Edge
+      }}>
       <Box sx={{ p: 3, borderBottom: `1px solid ${theme.palette.divider}` }}>
         <Typography variant="h5" component="h1" sx={{ 
           fontWeight: 700,
@@ -93,7 +103,7 @@ export default function MainLayout({ children }: LayoutProps) {
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
         }}>
-          Seo-Ops OS
+          Seo-Ops OS 
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           SEO Management Platform
