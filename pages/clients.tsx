@@ -56,6 +56,7 @@ export default function ClientsPage() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewingClient, setViewingClient] = useState<Client | null>(null);
 
   // Fetch clients from backend
   const fetchClients = async () => {
@@ -316,7 +317,7 @@ export default function ClientsPage() {
             textAlign: 'center', 
             padding: '3rem', 
             backgroundColor: 'white', 
-            borderRadius: '0.5rem',
+            borderRadius: '8px',
             border: '2px dashed #e5e7eb'
           }}>
             <h3 style={{ 
@@ -334,12 +335,14 @@ export default function ClientsPage() {
               <button
                 onClick={() => setShowOnboarding(true)}
                 style={{ 
-                  padding: '0.5rem 1rem', 
+                  padding: '0.75rem 1.5rem', 
                   backgroundColor: '#4f46e5', 
                   color: 'white', 
                   border: 'none', 
-                  borderRadius: '0.375rem',
-                  cursor: 'pointer'
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500'
                 }}
               >
                 Add First Client
@@ -350,7 +353,7 @@ export default function ClientsPage() {
           <div style={{ 
             display: 'grid', 
             gap: '1rem',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))'
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'
           }}>
             {clients.map((client) => (
               <div
@@ -358,133 +361,205 @@ export default function ClientsPage() {
                 style={{ 
                   backgroundColor: 'white', 
                   padding: '1.5rem', 
-                  borderRadius: '0.5rem',
+                  borderRadius: '8px',
                   border: '1px solid #e5e7eb',
-                  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  transition: 'all 0.2s ease',
+                  position: 'relative'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                <h3 style={{ 
-                  fontSize: '1.25rem', 
-                  fontWeight: '600', 
-                  marginBottom: '0.5rem',
-                  color: '#111827'
-                }}>
-                  {client.name}
-                </h3>
-                <p style={{ 
-                  color: '#6b7280', 
-                  fontSize: '0.875rem',
-                  marginBottom: '1rem'
-                }}>
-                  {client.industry}
-                </p>
-                
+                {/* Header */}
                 <div style={{ marginBottom: '1rem' }}>
-                  <h4 style={{ 
-                    fontSize: '0.875rem', 
-                    fontWeight: '500', 
+                  <h3 style={{ 
+                    fontSize: '1.125rem', 
+                    fontWeight: '600', 
                     marginBottom: '0.25rem',
-                    color: '#374151'
+                    color: '#111827'
                   }}>
-                    Locations:
-                  </h4>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                    {client.locations.join(', ')}
+                    {client.name}
+                  </h3>
+                  <p style={{ 
+                    color: '#6b7280', 
+                    fontSize: '0.875rem'
+                  }}>
+                    {client.industry}
                   </p>
                 </div>
 
-                <div style={{ marginBottom: '1rem' }}>
-                  <h4 style={{ 
-                    fontSize: '0.875rem', 
-                    fontWeight: '500', 
-                    marginBottom: '0.25rem',
-                    color: '#374151'
-                  }}>
-                    Services:
-                  </h4>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                    {client.services.join(', ')}
-                  </p>
-                </div>
+                {/* Content */}
+                <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  
+                  {/* Locations */}
+                  {client.locations.length > 0 && (
+                    <div>
+                      <div style={{ 
+                        fontSize: '0.75rem', 
+                        fontWeight: '500', 
+                        color: '#6b7280',
+                        marginBottom: '0.25rem'
+                      }}>
+                        Locations
+                      </div>
+                      <p style={{ 
+                        fontSize: '0.875rem', 
+                        color: '#374151'
+                      }}>
+                        {client.locations.join(', ')}
+                      </p>
+                    </div>
+                  )}
 
-                <div style={{ marginBottom: '1rem' }}>
-                  <h4 style={{ 
-                    fontSize: '0.875rem', 
-                    fontWeight: '500', 
-                    marginBottom: '0.25rem',
-                    color: '#374151'
-                  }}>
-                    Integrations:
-                  </h4>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {client.integrations.googleSearchConsole && (
-                      <span style={{ 
+                  {/* Services */}
+                  {client.services.length > 0 && (
+                    <div>
+                      <div style={{ 
                         fontSize: '0.75rem', 
-                        padding: '0.25rem 0.5rem', 
-                        backgroundColor: '#dbeafe', 
-                        color: '#1d4ed8',
-                        borderRadius: '0.25rem'
+                        fontWeight: '500', 
+                        color: '#6b7280',
+                        marginBottom: '0.25rem'
                       }}>
-                        GSC
-                      </span>
-                    )}
-                    {client.integrations.googleAnalytics && (
-                      <span style={{ 
-                        fontSize: '0.75rem', 
-                        padding: '0.25rem 0.5rem', 
-                        backgroundColor: '#dcfce7', 
-                        color: '#166534',
-                        borderRadius: '0.25rem'
-                      }}>
-                        GA4
-                      </span>
-                    )}
-                    {client.integrations.googleBusinessProfile && (
-                      <span style={{ 
-                        fontSize: '0.75rem', 
-                        padding: '0.25rem 0.5rem', 
-                        backgroundColor: '#fef3c7', 
-                        color: '#92400e',
-                        borderRadius: '0.25rem'
-                      }}>
-                        GBP
-                      </span>
-                    )}
+                        Services
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+                        {client.services.slice(0, 3).map((service, index) => (
+                          <span key={index} style={{ 
+                            fontSize: '0.75rem', 
+                            padding: '0.25rem 0.5rem', 
+                            backgroundColor: '#f3f4f6', 
+                            color: '#374151',
+                            borderRadius: '4px',
+                            fontWeight: '500'
+                          }}>
+                            {service}
+                          </span>
+                        ))}
+                        {client.services.length > 3 && (
+                          <span style={{ 
+                            fontSize: '0.75rem', 
+                            color: '#6b7280',
+                            fontWeight: '500'
+                          }}>
+                            +{client.services.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Integrations */}
+                  <div>
+                    <div style={{ 
+                      fontSize: '0.75rem', 
+                      fontWeight: '500', 
+                      color: '#6b7280',
+                      marginBottom: '0.25rem'
+                    }}>
+                      Integrations
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      {client.integrations.googleSearchConsole && (
+                        <span style={{ 
+                          fontSize: '0.75rem', 
+                          padding: '0.25rem 0.5rem', 
+                          backgroundColor: '#dbeafe', 
+                          color: '#1d4ed8',
+                          borderRadius: '4px',
+                          fontWeight: '500'
+                        }}>
+                          GSC
+                        </span>
+                      )}
+                      {client.integrations.googleAnalytics && (
+                        <span style={{ 
+                          fontSize: '0.75rem', 
+                          padding: '0.25rem 0.5rem', 
+                          backgroundColor: '#dcfce7', 
+                          color: '#166534',
+                          borderRadius: '4px',
+                          fontWeight: '500'
+                        }}>
+                          GA4
+                        </span>
+                      )}
+                      {client.integrations.googleBusinessProfile && (
+                        <span style={{ 
+                          fontSize: '0.75rem', 
+                          padding: '0.25rem 0.5rem', 
+                          backgroundColor: '#fef3c7', 
+                          color: '#92400e',
+                          borderRadius: '4px',
+                          fontWeight: '500'
+                        }}>
+                          GBP
+                        </span>
+                      )}
+                      {!client.integrations.googleSearchConsole && 
+                       !client.integrations.googleAnalytics && 
+                       !client.integrations.googleBusinessProfile && (
+                        <span style={{ 
+                          fontSize: '0.75rem', 
+                          color: '#9ca3af',
+                          fontStyle: 'italic'
+                        }}>
+                          None
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
+                {/* Actions */}
                 <div style={{ 
                   display: 'flex', 
                   gap: '0.5rem',
-                  marginTop: '1rem'
+                  paddingTop: '1rem',
+                  borderTop: '1px solid #f3f4f6'
                 }}>
                   <button
+                    onClick={() => setViewingClient(client)}
                     style={{ 
                       flex: 1,
-                      padding: '0.5rem', 
-                      backgroundColor: '#f3f4f6', 
+                      padding: '0.5rem 0.75rem', 
+                      backgroundColor: '#f9fafb', 
                       color: '#374151', 
-                      border: 'none', 
-                      borderRadius: '0.375rem',
+                      border: '1px solid #e5e7eb', 
+                      borderRadius: '6px',
                       cursor: 'pointer',
-                      fontSize: '0.875rem'
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f9fafb';
                     }}
                   >
-                    View Details
+                    View
                   </button>
                   {user?.role === 'owner' && (
                     <>
                       <button
                         onClick={() => handleEditClient(client)}
                         style={{ 
-                          flex: 1,
-                          padding: '0.5rem', 
+                          padding: '0.5rem 0.75rem', 
                           backgroundColor: '#4f46e5', 
                           color: 'white', 
                           border: 'none', 
-                          borderRadius: '0.375rem',
+                          borderRadius: '6px',
                           cursor: 'pointer',
-                          fontSize: '0.875rem'
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          minWidth: '60px'
                         }}
                       >
                         Edit
@@ -492,14 +567,15 @@ export default function ClientsPage() {
                       <button
                         onClick={() => handleClientDelete(client.id)}
                         style={{ 
-                          flex: 1,
-                          padding: '0.5rem', 
-                          backgroundColor: '#dc2626', 
+                          padding: '0.5rem 0.75rem', 
+                          backgroundColor: '#ef4444', 
                           color: 'white', 
                           border: 'none', 
-                          borderRadius: '0.375rem',
+                          borderRadius: '6px',
                           cursor: 'pointer',
-                          fontSize: '0.875rem'
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          minWidth: '60px'
                         }}
                       >
                         Delete
@@ -509,6 +585,376 @@ export default function ClientsPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Modern Client Details Modal */}
+        {viewingClient && (
+          <div 
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '1rem'
+            }}
+            onClick={() => setViewingClient(null)}
+          >
+            <div 
+              style={{
+                backgroundColor: 'white',
+                marginTop:"100px",
+                borderRadius: '16px',
+                maxWidth: '650px',
+                width: '100%',
+                maxHeight: '85vh',
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                position: 'relative'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div style={{
+                padding: '2rem 2rem 1rem 2rem',
+                borderBottom: '1px solid #f1f5f9',
+                position: 'sticky',
+                top: 0,
+                backgroundColor: 'white',
+                borderRadius: '16px 16px 0 0'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <h2 style={{
+                      fontSize: '1.875rem',
+                      fontWeight: '700',
+                      color: '#0f172a',
+                      margin: 0,
+                      marginBottom: '0.5rem'
+                    }}>
+                      {viewingClient.name}
+                    </h2>
+                    <p style={{
+                      fontSize: '1rem',
+                      color: '#64748b',
+                      margin: 0,
+                      fontWeight: '500'
+                    }}>
+                      {viewingClient.industry}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setViewingClient(null)}
+                    style={{
+                      backgroundColor: '#f8fafc',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '40px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      fontSize: '1.25rem',
+                      color: '#64748b',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#e2e8f0';
+                      e.currentTarget.style.color = '#334155';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f8fafc';
+                      e.currentTarget.style.color = '#64748b';
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div style={{ 
+                padding: '2rem',
+                flex: 1,
+                overflowY: 'auto',
+                overflowX: 'hidden'
+              }}>
+                <div style={{ display: 'grid', gap: '2rem' }}>
+                  
+                  {/* Basic Info */}
+                  <div style={{
+                    padding: '1.5rem',
+                    backgroundColor: '#f8fafc',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    <h3 style={{
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
+                      color: '#334155',
+                      margin: 0,
+                      marginBottom: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      📋 Basic Information
+                    </h3>
+                    <div style={{ display: 'grid', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#64748b', fontWeight: '500' }}>Created:</span>
+                        <span style={{ color: '#334155', fontWeight: '600' }}>
+                          {new Date(viewingClient.createdAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#64748b', fontWeight: '500' }}>Client ID:</span>
+                        <span style={{ color: '#334155', fontWeight: '600', fontSize: '0.875rem', fontFamily: 'monospace' }}>
+                          {viewingClient.id.slice(-8)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Locations */}
+                  <div>
+                    <h3 style={{
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
+                      color: '#334155',
+                      margin: 0,
+                      marginBottom: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      📍 Locations ({viewingClient.locations.length})
+                    </h3>
+                    {viewingClient.locations.length > 0 ? (
+                      <div style={{ display: 'grid', gap: '0.5rem' }}>
+                        {viewingClient.locations.map((location, index) => (
+                          <div key={index} style={{
+                            padding: '0.75rem 1rem',
+                            backgroundColor: 'white',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            color: '#334155'
+                          }}>
+                            {location}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>
+                        No locations specified
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Services */}
+                  <div>
+                    <h3 style={{
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
+                      color: '#334155',
+                      margin: 0,
+                      marginBottom: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      🛠️ Services ({viewingClient.services.length})
+                    </h3>
+                    {viewingClient.services.length > 0 ? (
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {viewingClient.services.map((service, index) => (
+                          <span key={index} style={{
+                            padding: '0.5rem 1rem',
+                            backgroundColor: '#eff6ff',
+                            color: '#1e40af',
+                            borderRadius: '20px',
+                            fontSize: '0.875rem',
+                            fontWeight: '500',
+                            border: '1px solid #dbeafe'
+                          }}>
+                            {service}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>
+                        No services specified
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Competitors */}
+                  <div>
+                    <h3 style={{
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
+                      color: '#334155',
+                      margin: 0,
+                      marginBottom: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      🏆 Competitors ({viewingClient.competitors.length})
+                    </h3>
+                    {viewingClient.competitors.length > 0 ? (
+                      <div style={{ display: 'grid', gap: '0.5rem' }}>
+                        {viewingClient.competitors.map((competitor, index) => (
+                          <div key={index} style={{
+                            padding: '0.75rem 1rem',
+                            backgroundColor: '#fef2f2',
+                            border: '1px solid #fecaca',
+                            borderRadius: '8px',
+                            color: '#991b1b'
+                          }}>
+                            {competitor}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>
+                        No competitors specified
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Integrations */}
+                  <div>
+                    <h3 style={{
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
+                      color: '#334155',
+                      margin: 0,
+                      marginBottom: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      🔗 Integrations
+                    </h3>
+                    <div style={{ display: 'grid', gap: '0.75rem' }}>
+                      {[
+                        { key: 'googleSearchConsole', name: 'Google Search Console', icon: '🔍' },
+                        { key: 'googleAnalytics', name: 'Google Analytics', icon: '📊' },
+                        { key: 'googleBusinessProfile', name: 'Google Business Profile', icon: '🏢' }
+                      ].map((integration) => (
+                        <div key={integration.key} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '1rem',
+                          backgroundColor: 'white',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <span style={{ fontSize: '1.25rem' }}>{integration.icon}</span>
+                            <span style={{ color: '#334155', fontWeight: '500' }}>{integration.name}</span>
+                          </div>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.375rem 0.75rem',
+                            borderRadius: '20px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            backgroundColor: viewingClient.integrations[integration.key as keyof typeof viewingClient.integrations] ? '#dcfce7' : '#fef2f2',
+                            color: viewingClient.integrations[integration.key as keyof typeof viewingClient.integrations] ? '#166534' : '#991b1b'
+                          }}>
+                            <span style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: viewingClient.integrations[integration.key as keyof typeof viewingClient.integrations] ? '#22c55e' : '#ef4444'
+                            }}></span>
+                            {viewingClient.integrations[integration.key as keyof typeof viewingClient.integrations] ? 'Connected' : 'Not Connected'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div style={{
+                padding: '1.5rem 2rem',
+                borderTop: '1px solid #f1f5f9',
+                backgroundColor: '#f8fafc',
+                borderRadius: '0 0 16px 16px',
+                display: 'flex',
+                gap: '0.75rem',
+                justifyContent: 'flex-end'
+              }}>
+                {user?.role === 'owner' && (
+                  <button
+                    onClick={() => {
+                      setViewingClient(null);
+                      handleEditClient(viewingClient);
+                    }}
+                    style={{
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#4f46e5',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      transition: 'background-color 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#4338ca';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#4f46e5';
+                    }}
+                  >
+                    Edit Client
+                  </button>
+                )}
+                <button
+                  onClick={() => setViewingClient(null)}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: 'white',
+                    color: '#374151',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f9fafb';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'white';
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
