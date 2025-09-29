@@ -57,6 +57,7 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
+  const [deletingClient, setDeletingClient] = useState<Client | null>(null);
 
   // Fetch clients from backend
   const fetchClients = async () => {
@@ -191,10 +192,6 @@ export default function ClientsPage() {
   };
 
   const handleClientDelete = async (clientId: string) => {
-    if (!confirm('Are you sure you want to delete this client? This action cannot be undone.')) {
-      return;
-    }
-
     try {
       console.log('Deleting client:', clientId);
       
@@ -212,11 +209,13 @@ export default function ClientsPage() {
 
       // Remove from local state
       setClients(prev => prev.filter(client => client.id !== clientId));
+      setDeletingClient(null);
       
       alert('Client deleted successfully!');
     } catch (error) {
       console.error('Failed to delete client:', error);
       alert(`Failed to delete client: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setDeletingClient(null);
     }
   };
 
@@ -565,7 +564,7 @@ export default function ClientsPage() {
                         Edit
                       </button>
                       <button
-                        onClick={() => handleClientDelete(client.id)}
+                        onClick={() => setDeletingClient(client)}
                         style={{ 
                           padding: '0.5rem 0.75rem', 
                           backgroundColor: '#ef4444', 
@@ -952,6 +951,183 @@ export default function ClientsPage() {
                   }}
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deletingClient && (
+          <div 
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1001,
+              padding: '1rem'
+            }}
+            onClick={() => setDeletingClient(null)}
+          >
+            <div 
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '16px',
+                maxWidth: '450px',
+                width: '100%',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                position: 'relative'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div style={{
+                padding: '2rem 2rem 1rem 2rem',
+                textAlign: 'center'
+              }}>
+                <div style={{
+                  width: '64px',
+                  height: '64px',
+                  backgroundColor: '#fef2f2',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 1rem auto'
+                }}>
+                  <span style={{ fontSize: '2rem' }}>⚠️</span>
+                </div>
+                <h2 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: '700',
+                  color: '#dc2626',
+                  margin: 0,
+                  marginBottom: '0.5rem'
+                }}>
+                  Delete Client
+                </h2>
+                <p style={{
+                  fontSize: '1rem',
+                  color: '#64748b',
+                  margin: 0,
+                  lineHeight: '1.5'
+                }}>
+                  Are you sure you want to delete <strong>{deletingClient.name}</strong>?
+                </p>
+              </div>
+
+              {/* Content */}
+              <div style={{ 
+                padding: '0 2rem 1rem 2rem',
+                textAlign: 'center'
+              }}>
+                <div style={{
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  marginBottom: '1.5rem'
+                }}>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#991b1b',
+                    margin: 0,
+                    fontWeight: '500'
+                  }}>
+                    ⚠️ This action cannot be undone. All client data, including locations, services, and integration settings will be permanently deleted.
+                  </p>
+                </div>
+
+                {/* Client Info Summary */}
+                <div style={{
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  textAlign: 'left'
+                }}>
+                  <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.875rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#64748b' }}>Industry:</span>
+                      <span style={{ color: '#334155', fontWeight: '500' }}>{deletingClient.industry}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#64748b' }}>Locations:</span>
+                      <span style={{ color: '#334155', fontWeight: '500' }}>{deletingClient.locations.length}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#64748b' }}>Services:</span>
+                      <span style={{ color: '#334155', fontWeight: '500' }}>{deletingClient.services.length}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#64748b' }}>Active Integrations:</span>
+                      <span style={{ color: '#334155', fontWeight: '500' }}>
+                        {[deletingClient.integrations.googleSearchConsole, deletingClient.integrations.googleAnalytics, deletingClient.integrations.googleBusinessProfile].filter(Boolean).length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div style={{
+                padding: '1.5rem 2rem',
+                borderTop: '1px solid #f1f5f9',
+                display: 'flex',
+                gap: '1rem',
+                justifyContent: 'center'
+              }}>
+                <button
+                  onClick={() => setDeletingClient(null)}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: 'white',
+                    color: '#374151',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease',
+                    minWidth: '100px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f9fafb';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'white';
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleClientDelete(deletingClient.id)}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#dc2626',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    transition: 'background-color 0.2s ease',
+                    minWidth: '100px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#b91c1c';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#dc2626';
+                  }}
+                >
+                  Delete Forever
                 </button>
               </div>
             </div>
